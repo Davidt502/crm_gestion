@@ -53,9 +53,9 @@ def find_all(where_clauses, params, offset, per_page):
                 JOIN categorias_proveedor c ON p.id_categoria = c.id_categoria
                 WHERE {where_str}
                 ORDER BY p.fecha_creacion DESC
-                OFFSET %s ROWS FETCH NEXT %s ROWS ONLY
+                LIMIT %s OFFSET %s
                 """,
-                params + [offset, per_page],
+                params + [per_page, offset],
             )
             rows = cursor.fetchall()
 
