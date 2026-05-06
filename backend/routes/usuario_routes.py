@@ -1,6 +1,6 @@
 """
 usuario_routes.py - Módulo de Gestión de Usuarios
-CRM Ing Software v3
+CRM Ing Software v3 - PostgreSQL version
 
 Endpoints:
   GET    /api/usuarios              - Listar usuarios
@@ -14,7 +14,7 @@ import logging
 import bcrypt
 from flask import Blueprint, request, jsonify
 from middleware.auth_middleware import token_required, get_usuario
-from database import db_connection, to_int
+from database import db_connection_dict, to_int, ejecutar_funcion
 
 logger = logging.getLogger(__name__)
 
@@ -34,17 +34,17 @@ def _hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
 
 
-def _row_to_dict(row) -> dict:
+def _row_to_dict(row: dict) -> dict:
     """Nunca incluye password_hash."""
     return {
-        "id_usuario":    row[0],
-        "nombre":        row[1],
-        "email":         row[2],
-        "username":      row[3],
-        "rol":           row[4],
-        "estado":        row[5],
-        "ultimo_acceso": row[6].strftime("%Y-%m-%d %H:%M:%S") if row[6] else None,
-        "fecha_creacion": row[7].strftime("%Y-%m-%d %H:%M:%S") if row[7] else None,
+        "id_usuario":    row.get('id_usuario'),
+        "nombre":        row.get('nombre'),
+        "email":         row.get('email'),
+        "username":      row.get('username'),
+        "rol":           row.get('rol'),
+        "estado":        row.get('estado'),
+        "ultimo_acceso": row.get('ultimo_acceso').strftime("%Y-%m-%d %H:%M:%S") if row.get('ultimo_acceso') else None,
+        "fecha_creacion": row.get('fecha_creacion').strftime("%Y-%m-%d %H:%M:%S") if row.get('fecha_creacion') else None,
     }
 
 
@@ -71,14 +71,14 @@ def listar_usuarios():
         page = 1
 
     per_page = 20
-    offset   = (page - 1) * per_page
-    nombre   = _sanitize(request.args.get("nombre", ""))
-    estado   = request.args.get("estado") or None
+    offset = (page - 1) * per_page
+    nombre = _sanitize(request.args.get("nombre", ""))
+    estado = request.args.get("estado") or None
 
     where = ["1=1"]
     params = []
     if nombre:
-        where.append("(nombre LIKE %s OR username LIKE %s)")
+        where.append("(nombre ILIKE %s OR username ILIKE %s)")
         params.extend([f"%{nombre}%", f"%{nombre}%"])
     if estado in ("Activo", "Inactivo"):
         where.append("estado = %s")
@@ -87,21 +87,19 @@ def listar_usuarios():
     where_str = " AND ".join(where)
 
     try:
-        with db_connection() as (conn, cursor):
-            cursor.execute(f"SELECT COUNT(*) FROM usuarios WHERE {where_str}", params)
-            total = cursor.fetchone()[0]
+        with db_connection_dict() as (conn, cursor):
+            cursor.execute(f"SELECT COUNT(*) as total FROM usuarios WHERE {where_str}", params)
+            total = cursor.fetchone()['total']
 
-            cursor.execute(
-                f"""
+            cursor.execute(f"""
                 SELECT id_usuario, nombre, email, username, rol, estado,
                        ultimo_acceso, fecha_creacion
                 FROM usuarios
                 WHERE {where_str}
                 ORDER BY fecha_creacion DESC
-                OFFSET %s ROWS FETCH NEXT %s ROWS ONLY
-                """,
-                params + [offset, per_page]
-            )
+                LIMIT %s OFFSET %s
+            """, params + [per_page, offset])
+            
             rows = cursor.fetchall()
 
         return jsonify({
@@ -122,16 +120,14 @@ def listar_usuarios():
 @_solo_admin
 def get_usuario_by_id(id):
     try:
-        with db_connection() as (conn, cursor):
-            cursor.execute(
-                """
+        with db_connection_dict() as (conn, cursor):
+            cursor.execute("""
                 SELECT id_usuario, nombre, email, username, rol, estado,
                        ultimo_acceso, fecha_creacion
                 FROM usuarios WHERE id_usuario = %s
-                """,
-                [id]
-            )
+            """, (id,))
             row = cursor.fetchone()
+        
         if not row:
             return jsonify({"error": "Usuario no encontrado."}), 404
         return jsonify(_row_to_dict(row))
@@ -149,15 +145,15 @@ def crear_usuario():
         return jsonify({"error": "Content-Type debe ser application/json"}), 400
     data = request.get_json(silent=True) or {}
 
-    nombre   = _sanitize(data.get("nombre", ""))
-    email    = _sanitize(data.get("email", ""), 150)
+    nombre = _sanitize(data.get("nombre", ""))
+    email = _sanitize(data.get("email", ""), 150)
     username = _sanitize(data.get("username", ""), 80)
     password = data.get("password", "")
-    rol      = _sanitize(data.get("rol", "usuario"), 30)
+    rol = _sanitize(data.get("rol", "usuario"), 30)
 
     # Validaciones
     errors = []
-    if not nombre:   errors.append("El nombre es obligatorio.")
+    if not nombre: errors.append("El nombre es obligatorio.")
     if not username: errors.append("El nombre de usuario es obligatorio.")
     if not password: errors.append("La contraseña es obligatoria.")
     elif len(password) < _MIN_PASSWORD_LEN:
@@ -173,16 +169,20 @@ def crear_usuario():
     password_hash = _hash_password(password)
 
     try:
-        with db_connection() as (conn, cursor):
-            cursor.callproc("sp_crear_usuario", [
-                nombre, email or None, username, password_hash, rol, get_usuario()
-            ])
-            row = cursor.fetchone()
-
-        id_usr = to_int(row[0]) if row else None
-        if id_usr:
-            return jsonify({"id_usuario": id_usr, "mensaje": row[1]}), 201
-        return jsonify({"error": row[1] if row else "Error al crear el usuario."}), 400
+        row = ejecutar_funcion("sp_crear_usuario", nombre, email or None, username, password_hash, rol, get_usuario())
+        
+        if row:
+            if isinstance(row, dict):
+                id_usr = row.get('id_usuario_result')
+                mensaje = row.get('mensaje_result')
+            else:
+                id_usr = row[0] if len(row) > 0 else None
+                mensaje = row[1] if len(row) > 1 else "Usuario creado."
+            
+            if id_usr:
+                return jsonify({"id_usuario": id_usr, "mensaje": mensaje}), 201
+        
+        return jsonify({"error": "Error al crear el usuario."}), 400
 
     except Exception as exc:
         logger.error("crear_usuario: %s", exc, exc_info=True)
@@ -199,8 +199,8 @@ def actualizar_usuario(id):
     data = request.get_json(silent=True) or {}
 
     nombre = _sanitize(data.get("nombre", ""))
-    email  = _sanitize(data.get("email", ""), 150)
-    rol    = _sanitize(data.get("rol", ""), 30) or None
+    email = _sanitize(data.get("email", ""), 150)
+    rol = _sanitize(data.get("rol", ""), 30) or None
 
     if not nombre:
         return jsonify({"error": "El nombre es obligatorio."}), 400
@@ -208,16 +208,20 @@ def actualizar_usuario(id):
         return jsonify({"error": "El rol debe ser 'admin' o 'usuario'."}), 400
 
     try:
-        with db_connection() as (conn, cursor):
-            cursor.callproc("sp_actualizar_usuario", [
-                id, nombre, email or None, rol, get_usuario()
-            ])
-            row = cursor.fetchone()
-
-        id_usr = to_int(row[0]) if row else None
-        if id_usr:
-            return jsonify({"id_usuario": id_usr, "mensaje": row[1]})
-        return jsonify({"error": row[1] if row else "Error al actualizar el usuario."}), 400
+        row = ejecutar_funcion("sp_actualizar_usuario", id, nombre, email or None, rol, get_usuario())
+        
+        if row:
+            if isinstance(row, dict):
+                id_usr = row.get('id_usuario_result')
+                mensaje = row.get('mensaje_result')
+            else:
+                id_usr = row[0] if len(row) > 0 else None
+                mensaje = row[1] if len(row) > 1 else "Usuario actualizado."
+            
+            if id_usr:
+                return jsonify({"id_usuario": id_usr, "mensaje": mensaje})
+        
+        return jsonify({"error": "Error al actualizar el usuario."}), 400
 
     except Exception as exc:
         logger.error("actualizar_usuario: %s", exc, exc_info=True)
@@ -244,13 +248,20 @@ def cambiar_password(id):
     password_hash = _hash_password(password)
 
     try:
-        with db_connection() as (conn, cursor):
-            cursor.callproc("sp_cambiar_password_usuario", [id, password_hash, get_usuario()])
-            row = cursor.fetchone()
-
-        if row and to_int(row[0]):
-            return jsonify({"mensaje": row[1]})
-        return jsonify({"error": row[1] if row else "Error al cambiar la contraseña."}), 400
+        row = ejecutar_funcion("sp_cambiar_password_usuario", id, password_hash, get_usuario())
+        
+        if row:
+            if isinstance(row, dict):
+                id_usr = row.get('id_usuario_result')
+                mensaje = row.get('mensaje_result')
+            else:
+                id_usr = row[0] if len(row) > 0 else None
+                mensaje = row[1] if len(row) > 1 else "Contraseña actualizada."
+            
+            if id_usr:
+                return jsonify({"mensaje": mensaje})
+        
+        return jsonify({"error": "Error al cambiar la contraseña."}), 400
 
     except Exception as exc:
         logger.error("cambiar_password: %s", exc, exc_info=True)
@@ -263,13 +274,20 @@ def cambiar_password(id):
 @_solo_admin
 def desactivar_usuario(id):
     try:
-        with db_connection() as (conn, cursor):
-            cursor.callproc("sp_desactivar_usuario", [id, get_usuario()])
-            row = cursor.fetchone()
-
-        if row and to_int(row[0]):
-            return jsonify({"mensaje": row[1]})
-        return jsonify({"error": row[1] if row else "Error al desactivar el usuario."}), 400
+        row = ejecutar_funcion("sp_desactivar_usuario", id, get_usuario())
+        
+        if row:
+            if isinstance(row, dict):
+                id_usr = row.get('id_usuario_result')
+                mensaje = row.get('mensaje_result')
+            else:
+                id_usr = row[0] if len(row) > 0 else None
+                mensaje = row[1] if len(row) > 1 else "Usuario desactivado."
+            
+            if id_usr:
+                return jsonify({"mensaje": mensaje})
+        
+        return jsonify({"error": "Error al desactivar el usuario."}), 400
 
     except Exception as exc:
         logger.error("desactivar_usuario: %s", exc, exc_info=True)
@@ -282,13 +300,20 @@ def desactivar_usuario(id):
 @_solo_admin
 def reactivar_usuario(id):
     try:
-        with db_connection() as (conn, cursor):
-            cursor.callproc("sp_reactivar_usuario", [id, get_usuario()])
-            row = cursor.fetchone()
-
-        if row and to_int(row[0]):
-            return jsonify({"mensaje": row[1]})
-        return jsonify({"error": row[1] if row else "Error al reactivar el usuario."}), 400
+        row = ejecutar_funcion("sp_reactivar_usuario", id, get_usuario())
+        
+        if row:
+            if isinstance(row, dict):
+                id_usr = row.get('id_usuario_result')
+                mensaje = row.get('mensaje_result')
+            else:
+                id_usr = row[0] if len(row) > 0 else None
+                mensaje = row[1] if len(row) > 1 else "Usuario reactivado."
+            
+            if id_usr:
+                return jsonify({"mensaje": mensaje})
+        
+        return jsonify({"error": "Error al reactivar el usuario."}), 400
 
     except Exception as exc:
         logger.error("reactivar_usuario: %s", exc, exc_info=True)
