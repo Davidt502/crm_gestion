@@ -1,14 +1,15 @@
 """
-auth.py - Autenticación con bcrypt + SQL Server
+auth.py - Autenticación con bcrypt + PostgreSQL
 Correcciones:
   - Uso de context manager (no fugas de conexión)
   - Validación de entrada antes de consultar
   - Mensajes de error genéricos para evitar enumeración de usuarios
-  - pw_hash puede venir como bytes o str según driver; se normaliza
 """
 import bcrypt
-from database import db_connection
+import logging
+from database import db_connection_dict, to_int, ejecutar_funcion
 
+logger = logging.getLogger(__name__)
 
 # Longitud máxima aceptable para evitar ataques de DoS con passwords enormes
 _MAX_FIELD_LEN = 256
@@ -28,14 +29,14 @@ def verificar_login(username: str, password: str):
         return None, "Usuario o contraseña incorrectos."
 
     try:
-        with db_connection() as (conn, cursor):
+        with db_connection_dict() as (conn, cursor):
             cursor.execute(
                 """
                 SELECT id_usuario, nombre, username, password_hash, rol, estado
                 FROM usuarios
                 WHERE username = %s
                 """,
-                [username],
+                (username,)
             )
             row = cursor.fetchone()
 
@@ -43,13 +44,17 @@ def verificar_login(username: str, password: str):
             if not row:
                 return None, "Usuario o contraseña incorrectos."
 
-            id_usuario, nombre, uname, pw_hash, rol, estado = row
+            id_usuario = row['id_usuario']
+            nombre = row['nombre']
+            uname = row['username']
+            pw_hash = row['password_hash']
+            rol = row['rol']
+            estado = row['estado']
 
             if estado != "Activo":
-                # Mensaje genérico para no revelar el motivo real
                 return None, "Usuario o contraseña incorrectos."
 
-            # Normalizar pw_hash a bytes (pymssql puede retornar str o bytes)
+            # Normalizar pw_hash a bytes
             if isinstance(pw_hash, str):
                 pw_hash_bytes = pw_hash.encode("utf-8")
             else:
@@ -65,19 +70,63 @@ def verificar_login(username: str, password: str):
 
             # Actualizar último acceso
             cursor.execute(
-                "UPDATE usuarios SET ultimo_acceso = GETDATE() WHERE id_usuario = %s",
-                [id_usuario],
+                "UPDATE usuarios SET ultimo_acceso = CURRENT_TIMESTAMP WHERE id_usuario = %s",
+                (id_usuario,)
             )
 
             return {
                 "id_usuario": id_usuario,
-                "nombre":     nombre,
-                "username":   uname,
-                "rol":        rol,
+                "nombre": nombre,
+                "username": uname,
+                "rol": rol,
             }, None
 
     except Exception as exc:
-        # No exponer detalles internos al cliente
-        import logging
-        logging.getLogger(__name__).error("Error en verificar_login: %s", exc, exc_info=True)
+        logger.error("Error en verificar_login: %s", exc, exc_info=True)
+        return None, "Error interno al autenticar."
+
+
+def verificar_login_sin_update(username: str, password: str):
+    """Verifica credenciales sin actualizar último acceso (útil para API pública)."""
+    if not username or not password:
+        return None, "Usuario o contraseña incorrectos."
+
+    username = username.strip()[:_MAX_FIELD_LEN]
+
+    try:
+        with db_connection_dict() as (conn, cursor):
+            cursor.execute(
+                """
+                SELECT id_usuario, nombre, username, password_hash, rol, estado
+                FROM usuarios
+                WHERE username = %s
+                """,
+                (username,)
+            )
+            row = cursor.fetchone()
+
+            if not row:
+                return None, "Usuario o contraseña incorrectos."
+
+            if row['estado'] != "Activo":
+                return None, "Usuario o contraseña incorrectos."
+
+            pw_hash = row['password_hash']
+            if isinstance(pw_hash, str):
+                pw_hash_bytes = pw_hash.encode("utf-8")
+            else:
+                pw_hash_bytes = pw_hash
+
+            if not bcrypt.checkpw(password.encode("utf-8"), pw_hash_bytes):
+                return None, "Usuario o contraseña incorrectos."
+
+            return {
+                "id_usuario": row['id_usuario'],
+                "nombre": row['nombre'],
+                "username": row['username'],
+                "rol": row['rol'],
+            }, None
+
+    except Exception as exc:
+        logger.error("Error en verificar_login_sin_update: %s", exc, exc_info=True)
         return None, "Error interno al autenticar."
