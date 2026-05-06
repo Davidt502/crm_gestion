@@ -1,139 +1,372 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 
-  'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 
-  'unsafe-inline'; connect-src 'self' https://crm-gestion.onrender.com;">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Empleados — CRM Ing Software</title>
-  <link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
-  <!-- Sidebar se inyecta via JS -->
+// empleados.js — CRM Ing Software
+
+
+function cerrarModal(id){ document.getElementById(id)?.classList.remove('open'); }
+function abrirModal(id){ document.getElementById(id)?.classList.add('open'); }
+
+function getHeaders(includeContentType = true) {
+  const headers = { 'Authorization': `Bearer ${getToken()}` };
+  if (includeContentType) headers['Content-Type'] = 'application/json';
+  return headers;
+}
+
+/* ═══════════════════════════ LISTA ═══════════════════════════ */
+if(document.getElementById('tbody') && !document.getElementById('id_dependencia')){
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!requireAuth()) return;
+    cargarDeps();
+    cargar();
+    cargarCumpleaneros();
+  });
+}
+
+/* ═══════════════ CUMPLEAÑEROS DEL MES ═══════════════════════ */
+async function cargarCumpleaneros() {
+  const container = document.getElementById('cumpleaneros-list');
+  const label     = document.getElementById('mes-label');
+  if (!container) return;
+
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const now = new Date();
+  if (label) label.textContent = `— ${meses[now.getMonth()]} ${now.getFullYear()}`;
+
+  try {
+    const res = await fetch(
+      `${CONFIG.API_BASE_URL}/api/empleados?per_page=200&estado=Activo`,
+      { headers: getHeaders(false) }
+    );
+    const d   = await res.json();
+    const mes = now.getMonth() + 1; // 1-based
+
+    const cumpleaneros = (d.empleados || []).filter(e => {
+      if (!e.fecha_nacimiento) return false;
+      const m = parseInt(e.fecha_nacimiento.split('-')[1], 10);
+      return m === mes;
+    }).sort((a, b) => {
+      const da = parseInt(a.fecha_nacimiento.split('-')[2], 10);
+      const db = parseInt(b.fecha_nacimiento.split('-')[2], 10);
+      return da - db;
+    });
+
+    if (!cumpleaneros.length) {
+      container.innerHTML = '<span style="color:var(--text2);font-size:0.85rem;padding:8px 0;">Sin cumpleañeros este mes.</span>';
+      return;
+    }
+
+    container.innerHTML = cumpleaneros.map(e => {
+      const parts = e.fecha_nacimiento.split('-');
+      const dia   = parseInt(parts[2], 10);
+      const hoy   = now.getDate();
+      const esHoy = dia === hoy;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+             background:${esHoy ? 'var(--gold)' : 'var(--surface2)'};
+             color:${esHoy ? '#000' : 'var(--text1)'};
+             border-radius:10px;border:1px solid var(--border);min-width:180px;">
+          <span style="font-size:1.5rem;">${esHoy ? '🎉' : '🎂'}</span>
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">${escapeHtml(e.nombre_completo)}</div>
+            <div style="font-size:0.78rem;opacity:0.75;">
+              ${escapeHtml(e.cargo || 'Sin cargo')} — día ${dia}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(err) {
+    if (container) container.innerHTML = '<span style="color:var(--danger);font-size:0.85rem;">Error al cargar cumpleañeros.</span>';
+    console.error('cargarCumpleaneros:', err);
+  }
+}
+
+async function cargarDeps(){
+  try{
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/dependencias`, {
+      headers: getHeaders(false)
+    });
+    const data = await res.json();
+    const sel = document.getElementById('search-dependencia');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Todas las dependencias</option>';
+    data.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id_dependencia;
+      o.textContent = d.nombre_dependencia;
+      sel.appendChild(o);
+    });
+  }catch(e){ console.error('Error cargando dependencias:', e); }
+}
+
+async function cargar(page=1){
+  const nombre = document.getElementById('search-nombre')?.value || '';
+  const dep = document.getElementById('search-dependencia')?.value || '';
+  const estado = document.getElementById('search-estado')?.value || '';
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="loading-overlay"><div class="spinner"></div></td></tr>';
   
-  <div class="main">
-    <div class="topbar">
-      <span class="topbar-breadcrumb">
-        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Empleados
-      </span>
-    </div>
-    <div class="page-content">
-      <div class="page-header">
-        <div><h1>👔 Empleados</h1><p>Gestión del personal y dependencias</p></div>
-        <a href="/form_empleado.html" class="btn btn-gold">＋ Nuevo Empleado</a>
-      </div>
-      
-      <!-- ══ Cumpleañeros del Mes ══ -->
-      <div id="cumpleaneros-section" style="margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
-          <span style="font-size:1.4rem;">🎂</span>
-          <h2 style="margin:0;font-size:1rem;font-weight:600;color:var(--text1);">Cumpleañeros del Mes</h2>
-          <span id="mes-label" style="font-size:0.85rem;color:var(--text2);"></span>
-        </div>
-        <div id="cumpleaneros-list" style="display:flex;flex-wrap:wrap;gap:12px;">
-          <div class="loading-overlay" style="width:100%;padding:16px 0;"><div class="spinner"></div></div>
-        </div>
-      </div>
+  try{
+    const p = new URLSearchParams({page});
+    if(nombre) p.set('nombre', nombre);
+    if(dep) p.set('dependencia', dep);
+    if(estado) p.set('estado', estado);
+    
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/empleados?${p}`, {
+      headers: getHeaders(false)
+    });
+    const d = await res.json();
+    renderTabla(d.empleados || [], d.total || 0, page, d.per_page || 10);
+  }catch(e){
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--danger);padding:20px;">Error al cargar.</td></tr>';
+  }
+}
 
-      <div class="search-bar">
-        <div class="form-group">
-          <label>Buscar</label>
-          <input type="text" id="search-nombre" placeholder="Nombre...">
-        </div>
-        <div class="form-group" style="max-width:160px;">
-          <label>Dependencia</label>
-          <select id="search-dependencia">
-            <option value="">Todas</option>
-          </select>
-        </div>
-        <div class="form-group" style="max-width:130px;">
-          <label>Estado</label>
-          <select id="search-estado">
-            <option value="Activo">Activos</option>
-            <option value="">Todos</option>
-            <option value="Inactivo">Inactivos</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:8px;align-items:flex-end;">
-          <button class="btn btn-gold" onclick="buscar()">🔍 Buscar</button>
-          <button class="btn btn-ghost" onclick="limpiar()">✕</button>
-          <button class="btn btn-ghost" onclick="abrirCrearDep()">＋ Dependencia</button>
-        </div>
-      </div>
-      
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>N° Empleado</th>
-              <th>Nombre Completo</th>
-              <th>Cargo</th>
-              <th>Dependencia</th>
-              <th>Estado</th>
-              <th>Correo</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tbody">
-            <tr><td colspan="7" class="loading-overlay"><div class="spinner"></div></td></tr>
-          </tbody>
-        </table>
-        <div class="pagination" id="paginacion" style="display:none;">
-          <span class="pagination-info" id="pag-info"></span>
-          <div class="pagination-controls" id="pag-controls"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+function renderTabla(items, total, page, per_page){
+  const tbody = document.getElementById('tbody');
+  if(!items.length){
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">👔</div><p>No se encontraron empleados.</p></div></td></tr>';
+    document.getElementById('paginacion').style.display = 'none';
+    return;
+  }
+  
+  tbody.innerHTML = items.map(e => `
+    <tr>
+      <td><strong>${escapeHtml(e.numero_empleado || "")}</strong></td>
+      <td><strong>${escapeHtml(e.nombre_completo)}</strong></td>
+      <td>${escapeHtml(e.cargo || '—')}</td>
+      <td>${escapeHtml(e.dependencia || 'Sin asignar')}</td>
+      <td><span class="badge ${e.estado==='Activo' ? 'badge-active' : 'badge-inactive'}">${escapeHtml(e.estado)}</span></td>
+      <td style="font-size:0.78rem;">${escapeHtml(e.correo || e.correo_empresarial || '—')}</td>
+      <td class="td-actions">
+        <a href="/form_empleado.html?id=${e.id_empleado}" class="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</a>
+        <button class="btn btn-ghost btn-sm btn-icon" title="Reasignar dependencia"
+          data-id="${e.id_empleado}" data-nombre="${escapeHtml(e.nombre_completo)}"
+          onclick="abrirReasignar(this.dataset.id, this.dataset.nombre)">🔄</button>
+      </td>
+    </tr>`).join('');
 
-  <!-- Modal reasignar -->
-  <div class="modal-overlay" id="modal-reasignar">
-    <div class="modal" style="max-width:500px;">
-      <div class="modal-title">🔄 Reasignar Dependencia</div>
-      <div class="modal-body" style="text-align:left;">
-        <p style="margin-bottom:12px;">Empleado: <strong id="dep-actual-nombre"></strong></p>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label>Nueva Dependencia *</label>
-          <select id="dep-nueva"><option value="">Selecciona...</option></select>
-        </div>
-        <div class="form-group" style="margin-bottom:12px;">
-          <label>Motivo *</label>
-          <input type="text" id="motivo-reasignar" placeholder="Motivo de la reasignación...">
-        </div>
-        <div class="form-group">
-          <label>Fecha Efectiva</label>
-          <input type="date" id="fecha-efectiva-reasignar">
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="cerrarModal('modal-reasignar')">Cancelar</button>
-        <button class="btn btn-gold" onclick="confirmarReasignar()">Confirmar</button>
-      </div>
-    </div>
-  </div>
+  const pag = document.getElementById('paginacion');
+  pag.style.display = 'flex';
+  const desde = (page-1)*per_page + 1;
+  const hasta = Math.min(page*per_page, total);
+  document.getElementById('pag-info').textContent = `Mostrando ${desde}–${hasta} de ${total}`;
+  
+  const ctrl = document.getElementById('pag-controls');
+  ctrl.innerHTML = '';
+  const pages = Math.ceil(total / per_page);
+  
+  const btn = (label, p, active, disabled) => {
+    const b = document.createElement('button');
+    b.className = 'page-btn' + (active ? ' active' : '');
+    b.textContent = label;
+    b.disabled = disabled;
+    if(!disabled) b.onclick = () => cargar(p);
+    return b;
+  };
+  
+  ctrl.appendChild(btn('‹', page-1, false, page<=1));
+  for(let i = Math.max(1, page-2); i <= Math.min(pages, page+2); i++)
+    ctrl.appendChild(btn(i, i, i===page, false));
+  ctrl.appendChild(btn('›', page+1, false, page>=pages));
+}
 
-  <!-- Modal nueva dependencia -->
-  <div class="modal-overlay" id="modal-dependencia">
-    <div class="modal">
-      <div class="modal-title">＋ Nueva Dependencia</div>
-      <div class="modal-body" style="text-align:left;">
-        <div class="form-group">
-          <label>Nombre de la Dependencia *</label>
-          <input type="text" id="dep-input" placeholder="Ej: Recursos Humanos">
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="cerrarModal('modal-dependencia')">Cancelar</button>
-        <button class="btn btn-gold" onclick="crearDependencia()">Crear</button>
-      </div>
-    </div>
-  </div>
+function buscar(){ cargar(1); }
+function limpiar(){
+  document.getElementById('search-nombre').value = '';
+  document.getElementById('search-dependencia').value = '';
+  document.getElementById('search-estado').value = '';
+  cargar(1);
+}
 
-  <div id="toast-container"></div>
-  <script src="js/config.js"></script>
-  <script src="js/sidebar.js"></script>
-  <script src="js/empleados.js"></script>
-</body>
-</html>
+/* ═══════════════════ MODAL NUEVA DEPENDENCIA ═════════════════ */
+function abrirCrearDep(){
+  document.getElementById('dep-input').value = '';
+  abrirModal('modal-dependencia');
+}
 
+async function crearDependencia(){
+  const nombre = document.getElementById('dep-input').value.trim();
+  if(!nombre){ showToast('El nombre es obligatorio.', 'error'); return; }
+  
+  try{
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/dependencias`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({nombre_dependencia: nombre})
+    });
+    const d = await res.json();
+    if(d.error){ showToast(d.error, 'error'); return; }
+    showToast(d.mensaje || 'Dependencia creada.', 'success');
+    cerrarModal('modal-dependencia');
+    cargarDeps();
+  }catch(e){ showToast('Error al crear.', 'error'); }
+}
+
+/* ══════════════════════════ FORMULARIO ══════════════════════════ */
+if(typeof EMPLEADO_ID !== 'undefined'){
+  document.addEventListener('DOMContentLoaded', async () => {
+    if (!requireAuth()) return;
+    await cargarDepsForm();
+    if(EMPLEADO_ID) cargarDatos(EMPLEADO_ID);
+  });
+}
+
+async function cargarDepsForm(){
+  try{
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/dependencias`, {
+      headers: getHeaders(false)
+    });
+    const data = await res.json();
+    const sel = document.getElementById('id_dependencia');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">Sin asignar</option>';
+    data.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id_dependencia;
+      o.textContent = d.nombre_dependencia;
+      sel.appendChild(o);
+    });
+  }catch(e){ console.error('Error cargando dependencias:', e); }
+}
+
+async function cargarDatos(id){
+  try{
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/empleados/${id}`, {
+      headers: getHeaders(false)
+    });
+    const d = await res.json();
+    if(d.error){ showToast(d.error, 'error'); return; }
+    
+    document.getElementById('form-title').textContent = 'Editar Empleado';
+    document.getElementById('form-breadcrumb').textContent = 'Editar';
+    document.getElementById('numero_empleado').value = d.numero_empleado || '';
+    document.getElementById('numero_empleado').disabled = true;
+    document.getElementById('dpi').value = d.dpi || '';
+    document.getElementById('dpi').disabled = true;
+    document.getElementById('nombre_completo').value = d.nombre_completo || '';
+    document.getElementById('cargo').value = d.cargo || '';
+    document.getElementById('id_dependencia').value = d.id_dependencia || '';
+    document.getElementById('estado').value = d.estado || 'Activo';
+    document.getElementById('fecha_nacimiento').value = d.fecha_nacimiento || '';
+    document.getElementById('telefono').value = d.telefono || '';
+    document.getElementById('correo').value = d.correo || '';
+    document.getElementById('correo_empresarial').value = d.correo_empresarial || '';
+    document.getElementById('correo_personal').value = d.correo_personal || '';
+    document.getElementById('red_social').value = d.red_social || '';
+    document.getElementById('direccion').value = d.direccion || '';
+  }catch(e){ showToast('Error al cargar datos.', 'error'); }
+}
+
+async function guardar(){
+  const nombre = document.getElementById('nombre_completo').value.trim();
+  const numEmp = document.getElementById('numero_empleado')?.value.trim();
+  const dpi = document.getElementById('dpi')?.value.trim();
+  const corrEmp = document.getElementById('correo_empresarial')?.value.trim();
+  const telefono = document.getElementById('telefono')?.value.trim();
+  const isEdit = typeof EMPLEADO_ID !== 'undefined' && EMPLEADO_ID;
+
+  if(!nombre){ showToast('El nombre completo es obligatorio.', 'error'); return; }
+  if(!isEdit && !numEmp){ showToast('El número de empleado es obligatorio.', 'error'); return; }
+  if(!isEdit && !dpi){ showToast('El DPI es obligatorio.', 'error'); return; }
+  if(telefono && !/^\d{7,15}$/.test(telefono.replace(/[\s\-\+\(\)]/g, '')))
+    { showToast('Teléfono inválido (7-15 dígitos).', 'error'); return; }
+  if(corrEmp && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(corrEmp))
+    { showToast('Correo empresarial inválido.', 'error'); return; }
+
+  const payload = {
+    numero_empleado: numEmp,
+    dpi,
+    nombre_completo: nombre,
+    cargo: document.getElementById('cargo').value.trim() || null,
+    id_dependencia: document.getElementById('id_dependencia').value || null,
+    estado: document.getElementById('estado').value,
+    fecha_nacimiento: document.getElementById('fecha_nacimiento').value || null,
+    correo: document.getElementById('correo')?.value.trim() || null,
+    correo_empresarial: corrEmp || null,
+    correo_personal: document.getElementById('correo_personal')?.value.trim() || null,
+    telefono: telefono || null,
+    direccion: document.getElementById('direccion').value.trim() || null,
+    red_social: document.getElementById('red_social')?.value.trim() || null,
+  };
+
+  const btn = document.querySelector('.btn-gold');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  try{
+    const url = isEdit 
+      ? `${CONFIG.API_BASE_URL}/api/empleados/${EMPLEADO_ID}` 
+      : `${CONFIG.API_BASE_URL}/api/empleados`;
+    const method = isEdit ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.error){
+      showToast(data.error, 'error');
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar';
+      return;
+    }
+    showToast(data.mensaje || 'Operación exitosa.', 'success');
+    setTimeout(() => window.location.href = '/empleados.html', 1200);
+  }catch(e){
+    showToast('Error al guardar.', 'error');
+    btn.disabled = false;
+    btn.textContent = '💾 Guardar';
+  }
+}
+
+/* ═══════════════════ REASIGNAR DEPENDENCIA ══════════════════ */
+let pendingReasignarId = null;
+
+async function abrirReasignar(id, nombre){
+  pendingReasignarId = id;
+  document.getElementById('dep-actual-nombre').textContent = nombre;
+  document.getElementById('motivo-reasignar').value = '';
+  document.getElementById('fecha-efectiva-reasignar').value = '';
+
+  try{
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/dependencias`, {
+      headers: getHeaders(false)
+    });
+    const data = await res.json();
+    const sel = document.getElementById('dep-nueva');
+    sel.innerHTML = '<option value="">Selecciona...</option>';
+    data.forEach(d => {
+      const o = document.createElement('option');
+      o.value = d.id_dependencia;
+      o.textContent = d.nombre_dependencia;
+      sel.appendChild(o);
+    });
+  }catch(e){ console.error('Error cargando dependencias:', e); }
+
+  abrirModal('modal-reasignar');
+}
+
+async function confirmarReasignar(){
+  const dep = document.getElementById('dep-nueva').value;
+  const motivo = document.getElementById('motivo-reasignar').value.trim();
+  const fecha = document.getElementById('fecha-efectiva-reasignar').value;
+  
+  if(!dep){ showToast('Selecciona la nueva dependencia.', 'error'); return; }
+  if(!motivo){ showToast('El motivo es obligatorio.', 'error'); return; }
+  
+  try{
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/empleados/${pendingReasignarId}/reasignar`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({
+        id_dependencia_nueva: parseInt(dep),
+        motivo,
+        fecha_efectiva: fecha || null
+      })
+    });
+    const d = await res.json();
+    if(d.error){ showToast(d.error, 'error'); return; }
+    showToast(d.mensaje || 'Reasignación exitosa.', 'success');
+    cerrarModal('modal-reasignar');
+    cargar(1);
+  }catch(e){ showToast('Error.', 'error'); }
+}
