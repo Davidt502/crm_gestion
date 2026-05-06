@@ -73,9 +73,9 @@ def get_all_compras(proveedor=None, estado_pago=None, page=1, per_page=20):
                 JOIN proveedores p ON c.id_proveedor = p.id_proveedor
                 WHERE {where_str}
                 ORDER BY c.fecha_creacion DESC
-                OFFSET %s ROWS FETCH NEXT %s ROWS ONLY
+                LIMIT %s OFFSET %s
                 """,
-                params + [offset, per_page],
+                params + [per_page, offset],
             )
             rows = cursor.fetchall()
 
