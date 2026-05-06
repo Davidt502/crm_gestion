@@ -1,5 +1,27 @@
-DB_SERVER=localhost
-DB_PORT=1433
-DB_NAME=crm_ing_software
-DB_USER=sa
-DB_PASSWORD=123456789
+# ─── Configuración PostgreSQL (Supabase) ───
+DB_HOST=aws-1-us-east-1.pooler.supabase.com
+DB_PORT=5432
+DB_NAME=postgres
+DB_USER=postgres.cvjyecaehndryqzfkvgp
+DB_PASSWORD=David2001**
+DB_SSLMODE=require
+
+# ─── URL directa (opcional) ───
+DATABASE_URL=postgresql://postgres.cvjyecaehndryqzfkvgp:David2001**@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require
+
+# ─── Seguridad ───
+SECRET_KEY=c66f5e523808912749ab5c822470b3a485ba8b0dd1acc3922081672ab520c7ce
+JWT_SECRET=c66f5e523808912749ab5c822470b3a485ba8b0dd1acc3922081672ab520c7ce
+
+# ─── Flask ───
+FLASK_DEBUG=false
+DEBUG=false
+
+# ─── JWT ───
+JWT_EXPIRY_HOURS=8
+
+# ─── CORS ───
+CORS_ORIGINS=http://localhost:3000,http://localhost:8080,https://tudominio.onrender.com
+
+# ─── Tipo de DB ───
+DB_TYPE=postgresql
