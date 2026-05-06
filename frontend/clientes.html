@@ -2,49 +2,48 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" 
-  content="default-src 'self'; style-src 'self' 
-  'unsafe-inline' https://fonts.googleapis.com; 
-  font-src https://fonts.gstatic.com; script-src 
-  'self' 'unsafe-inline'; connect-src 
-  'self' https://crm-gestion.onrender.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 
+  'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; 
+  script-src 'self' 'unsafe-inline'; connect-src 'self'  https://crm-gestion.onrender.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Usuarios — CRM Ing Software</title>
+  <title>Clientes — CRM Ing Software</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
+  <!-- Sidebar se inyecta via JS -->
+  
   <div class="main">
     <div class="topbar">
       <span class="topbar-breadcrumb">
-        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Usuarios
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Clientes
       </span>
     </div>
     <div class="page-content">
       <div class="page-header">
-        <div>
-          <h1>👤 Gestión de Usuarios</h1>
-          <p>Administración de accesos al sistema · Solo administradores</p>
-        </div>
-        <a href="/form_usuario.html" class="btn btn-gold">＋ Nuevo Usuario</a>
+        <div><h1>Clientes</h1><p>Gestión de clientes y prospectos registrados</p></div>
+        <a href="/form_cliente.html" class="btn btn-gold">＋ Nuevo Cliente</a>
       </div>
 
       <div class="search-bar">
         <div class="form-group">
-          <label>Buscar por nombre o usuario</label>
-          <input type="text" id="search-nombre" placeholder="Nombre o nombre de usuario...">
+          <label>Nombre o Razón Social</label>
+          <input type="text" id="search-nombre" placeholder="Buscar por nombre...">
         </div>
-        <div class="form-group" style="max-width:160px;">
-          <label>Estado</label>
-          <select id="search-estado">
+        <div class="form-group">
+          <label>Documento</label>
+          <input type="text" id="search-documento" placeholder="NIT, CC, CE...">
+        </div>
+        <div class="form-group" style="max-width:170px;">
+          <label>Tipo</label>
+          <select id="search-tipo">
             <option value="">Todos</option>
-            <option value="Activo">Activo</option>
-            <option value="Inactivo">Inactivo</option>
+            <option value="Cliente">Cliente</option>
+            <option value="Prospecto">Prospecto</option>
           </select>
         </div>
         <div style="display:flex;gap:8px;align-items:flex-end;">
-          <button class="btn btn-gold" onclick="buscar()">🔍 Buscar</button>
-          <button class="btn btn-ghost" onclick="limpiar()">✕</button>
+          <button class="btn btn-gold" onclick="buscarClientes()">🔍 Buscar</button>
+          <button class="btn btn-ghost" onclick="limpiarBusqueda()">✕</button>
         </div>
       </div>
 
@@ -52,48 +51,33 @@
         <table>
           <thead>
             <tr>
-              <th>Nombre</th>
-              <th>Usuario</th>
-              <th>Correo</th>
-              <th>Rol</th>
+              <th>Nombre / Razón Social</th>
+              <th>Documento</th>
+              <th>Tipo</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
           </thead>
-          <tbody id="usuarios-tbody">
-            <tr><td colspan="6" class="loading-overlay"><div class="spinner"></div></td></tr>
+          <tbody id="clientes-tbody">
+            <tr><td colspan="5" class="loading-overlay"><div class="spinner"></div></td></tr>
           </tbody>
         </table>
-        <div class="pagination" id="paginacion" style="display:none;">
-          <span class="pagination-info" id="pag-info"></span>
+        <div class="pagination" id="pagination-clientes" style="display:none;">
+          <div class="pagination-info" id="pag-info"></div>
           <div class="pagination-controls" id="pag-controls"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal desactivar -->
-  <div class="modal-overlay" id="modal-desactivar">
+  <div class="modal-overlay" id="modal-inactivar">
     <div class="modal">
       <div class="modal-icon warning">⚠️</div>
-      <div class="modal-title">¿Desactivar usuario?</div>
-      <div class="modal-body">El usuario no podrá iniciar sesión mientras esté inactivo. Esta acción es reversible.</div>
+      <div class="modal-title">Inactivar Cliente</div>
+      <div class="modal-body">¿Está seguro de que desea inactivar este cliente? Su estado cambiará a <strong>Inactivo</strong>.</div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="cerrarModal('modal-desactivar')">Cancelar</button>
-        <button class="btn btn-danger" onclick="confirmarDesactivar()">Desactivar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal reactivar -->
-  <div class="modal-overlay" id="modal-reactivar">
-    <div class="modal">
-      <div class="modal-icon" style="background:rgba(46,204,138,.12);border:1px solid rgba(46,204,138,.3);">✅</div>
-      <div class="modal-title">¿Reactivar usuario?</div>
-      <div class="modal-body">El usuario recuperará el acceso al sistema con su rol asignado.</div>
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="cerrarModal('modal-reactivar')">Cancelar</button>
-        <button class="btn btn-gold" onclick="confirmarReactivar()">Reactivar</button>
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-inactivar')">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmarInactivar()">Inactivar</button>
       </div>
     </div>
   </div>
@@ -101,6 +85,6 @@
   <div id="toast-container"></div>
   <script src="js/config.js"></script>
   <script src="js/sidebar.js"></script>
-  <script src="js/usuarios.js"></script>
+  <script src="js/clientes.js"></script>
 </body>
 </html>
