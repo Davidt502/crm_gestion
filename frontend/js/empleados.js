@@ -16,7 +16,67 @@ if(document.getElementById('tbody') && !document.getElementById('id_dependencia'
     if (!requireAuth()) return;
     cargarDeps();
     cargar();
+    cargarCumpleaneros();
   });
+}
+
+/* ═══════════════ CUMPLEAÑEROS DEL MES ═══════════════════════ */
+async function cargarCumpleaneros() {
+  const container = document.getElementById('cumpleaneros-list');
+  const label     = document.getElementById('mes-label');
+  if (!container) return;
+
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const now = new Date();
+  if (label) label.textContent = `— ${meses[now.getMonth()]} ${now.getFullYear()}`;
+
+  try {
+    const res = await fetch(
+      `${CONFIG.API_BASE_URL}/api/empleados?per_page=200&estado=Activo`,
+      { headers: getHeaders(false) }
+    );
+    const d   = await res.json();
+    const mes = now.getMonth() + 1; // 1-based
+
+    const cumpleaneros = (d.empleados || []).filter(e => {
+      if (!e.fecha_nacimiento) return false;
+      const m = parseInt(e.fecha_nacimiento.split('-')[1], 10);
+      return m === mes;
+    }).sort((a, b) => {
+      const da = parseInt(a.fecha_nacimiento.split('-')[2], 10);
+      const db = parseInt(b.fecha_nacimiento.split('-')[2], 10);
+      return da - db;
+    });
+
+    if (!cumpleaneros.length) {
+      container.innerHTML = '<span style="color:var(--text2);font-size:0.85rem;padding:8px 0;">Sin cumpleañeros este mes.</span>';
+      return;
+    }
+
+    container.innerHTML = cumpleaneros.map(e => {
+      const parts = e.fecha_nacimiento.split('-');
+      const dia   = parseInt(parts[2], 10);
+      const hoy   = now.getDate();
+      const esHoy = dia === hoy;
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
+             background:${esHoy ? 'var(--gold)' : 'var(--surface2)'};
+             color:${esHoy ? '#000' : 'var(--text1)'};
+             border-radius:10px;border:1px solid var(--border);min-width:180px;">
+          <span style="font-size:1.5rem;">${esHoy ? '🎉' : '🎂'}</span>
+          <div>
+            <div style="font-weight:600;font-size:0.88rem;">${escapeHtml(e.nombre_completo)}</div>
+            <div style="font-size:0.78rem;opacity:0.75;">
+              ${escapeHtml(e.cargo || 'Sin cargo')} — día ${dia}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+  } catch(err) {
+    if (container) container.innerHTML = '<span style="color:var(--danger);font-size:0.85rem;">Error al cargar cumpleañeros.</span>';
+    console.error('cargarCumpleaneros:', err);
+  }
 }
 
 async function cargarDeps(){
@@ -79,7 +139,8 @@ function renderTabla(items, total, page, per_page){
       <td class="td-actions">
         <a href="/form_empleado.html?id=${e.id_empleado}" class="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</a>
         <button class="btn btn-ghost btn-sm btn-icon" title="Reasignar dependencia"
-          onclick="abrirReasignar(${e.id_empleado},this.dataset.nombre" data-nombre="${escapeHtml(e.nombre_completo)})">🔄</button>
+          data-id="${e.id_empleado}" data-nombre="${escapeHtml(e.nombre_completo)}"
+          onclick="abrirReasignar(this.dataset.id, this.dataset.nombre)">🔄</button>
       </td>
     </tr>`).join('');
 
