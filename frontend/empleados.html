@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Empleados — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+  
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Empleados
+      </span>
+    </div>
+    <div class="page-content">
+      <div class="page-header">
+        <div><h1>👔 Empleados</h1><p>Gestión del personal y dependencias</p></div>
+        <a href="/form_empleado.html" class="btn btn-gold">＋ Nuevo Empleado</a>
+      </div>
+      
+      <div class="search-bar">
+        <div class="form-group">
+          <label>Buscar</label>
+          <input type="text" id="search-nombre" placeholder="Nombre...">
+        </div>
+        <div class="form-group" style="max-width:160px;">
+          <label>Dependencia</label>
+          <select id="search-dependencia">
+            <option value="">Todas</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:130px;">
+          <label>Estado</label>
+          <select id="search-estado">
+            <option value="Activo">Activos</option>
+            <option value="">Todos</option>
+            <option value="Inactivo">Inactivos</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <button class="btn btn-gold" onclick="buscar()">🔍 Buscar</button>
+          <button class="btn btn-ghost" onclick="limpiar()">✕</button>
+          <button class="btn btn-ghost" onclick="abrirCrearDep()">＋ Dependencia</button>
+        </div>
+      </div>
+      
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>N° Empleado</th>
+              <th>Nombre Completo</th>
+              <th>Cargo</th>
+              <th>Dependencia</th>
+              <th>Estado</th>
+              <th>Correo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="7" class="loading-overlay"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+        <div class="pagination" id="paginacion" style="display:none;">
+          <span class="pagination-info" id="pag-info"></span>
+          <div class="pagination-controls" id="pag-controls"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal reasignar -->
+  <div class="modal-overlay" id="modal-reasignar">
+    <div class="modal" style="max-width:500px;">
+      <div class="modal-title">🔄 Reasignar Dependencia</div>
+      <div class="modal-body" style="text-align:left;">
+        <p style="margin-bottom:12px;">Empleado: <strong id="dep-actual-nombre"></strong></p>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Nueva Dependencia *</label>
+          <select id="dep-nueva"><option value="">Selecciona...</option></select>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>Motivo *</label>
+          <input type="text" id="motivo-reasignar" placeholder="Motivo de la reasignación...">
+        </div>
+        <div class="form-group">
+          <label>Fecha Efectiva</label>
+          <input type="date" id="fecha-efectiva-reasignar">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-reasignar')">Cancelar</button>
+        <button class="btn btn-gold" onclick="confirmarReasignar()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal nueva dependencia -->
+  <div class="modal-overlay" id="modal-dependencia">
+    <div class="modal">
+      <div class="modal-title">＋ Nueva Dependencia</div>
+      <div class="modal-body" style="text-align:left;">
+        <div class="form-group">
+          <label>Nombre de la Dependencia *</label>
+          <input type="text" id="dep-input" placeholder="Ej: Recursos Humanos">
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-dependencia')">Cancelar</button>
+        <button class="btn btn-gold" onclick="crearDependencia()">Crear</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/empleados.js"></script>
+</body>
+</html>

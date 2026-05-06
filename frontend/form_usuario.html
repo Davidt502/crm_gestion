@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuario — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span>
+        <a href="/usuarios.html">Usuarios</a> <span>›</span>
+        <span id="form-breadcrumb">Nuevo</span>
+      </span>
+    </div>
+    <div class="page-content" style="max-width:720px;">
+      <div class="page-header">
+        <div>
+          <h1 id="form-title">Nuevo Usuario</h1>
+          <p>Configura los datos de acceso al sistema</p>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <div class="form-section-title">👤 Datos del Usuario</div>
+        <div class="form-grid">
+
+          <div class="form-group">
+            <label>Nombre completo *</label>
+            <input type="text" id="campo-nombre" placeholder="Ej. Ana García López" maxlength="150">
+          </div>
+
+          <div class="form-group">
+            <label>Correo electrónico</label>
+            <input type="email" id="campo-email" placeholder="usuario@empresa.com" maxlength="150">
+          </div>
+
+          <div class="form-group">
+            <label>Nombre de usuario *</label>
+            <input type="text" id="campo-username" placeholder="Ej. ana.garcia" maxlength="80"
+                   autocomplete="username"
+                   style="font-family:var(--font-mono,monospace);">
+          </div>
+
+          <div class="form-group">
+            <label>Rol *</label>
+            <select id="campo-rol">
+              <option value="usuario">Usuario</option>
+              <option value="admin">Administrador</option>
+            </select>
+            <div style="font-size:.72rem;color:#64748b;margin-top:4px;">
+              Los administradores pueden gestionar usuarios del sistema.
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Sección contraseña: oculta hasta que JS la muestre -->
+      <div class="form-section" id="section-password" style="display:none;">
+        <div class="form-section-title">🔐 Contraseña</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label id="lbl-password">Contraseña *</label>
+            <!-- type="password": nunca visible, autocomplete correcto -->
+            <input type="password" id="campo-password" placeholder="Mínimo 6 caracteres"
+                   maxlength="128" autocomplete="new-password">
+            <div style="font-size:.72rem;color:#64748b;margin-top:4px;">
+              La contraseña se almacena encriptada. Nunca se muestra en texto plano.
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Confirmar contraseña</label>
+            <input type="password" id="campo-password-confirm" placeholder="Repite la contraseña"
+                   maxlength="128" autocomplete="new-password">
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="/usuarios.html" class="btn btn-ghost">Cancelar</a>
+        <button class="btn btn-gold" onclick="guardarConConfirm()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/usuarios.js"></script>
+  <script>
+    // Validación de confirmación de contraseña antes de delegar a usuarios.js
+    function guardarConConfirm() {
+      const pwd     = document.getElementById('campo-password').value;
+      const confirm = document.getElementById('campo-password-confirm').value;
+      if (pwd && pwd !== confirm) {
+        showToast('Las contraseñas no coinciden.', 'error');
+        return;
+      }
+      guardar();
+    }
+  </script>
+</body>
+</html>

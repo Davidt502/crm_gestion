@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <span style="color:var(--gold)">⚙️</span> &nbsp;Dashboard
+      </span>
+      <div class="topbar-actions">
+        <span class="topbar-date" id="current-date"></span>
+      </div>
+    </div>
+
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p>Resumen general del sistema CRM</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card gold">
+          <div class="stat-top">
+            <div class="stat-icon">👥</div>
+          </div>
+          <div class="stat-value" id="stat-activos">—</div>
+          <div class="stat-label">Clientes Activos</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-top">
+            <div class="stat-icon">🚫</div>
+          </div>
+          <div class="stat-value" id="stat-inactivos">—</div>
+          <div class="stat-label">Clientes Inactivos</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-top">
+            <div class="stat-icon">🎯</div>
+          </div>
+          <div class="stat-value" id="stat-prospectos">—</div>
+          <div class="stat-label">Prospectos</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-top">
+            <div class="stat-icon">🏢</div>
+          </div>
+          <div class="stat-value" id="stat-proveedores">—</div>
+          <div class="stat-label">Proveedores Activos</div>
+        </div>
+      </div>
+
+      <!-- Birthday -->
+      <div class="birthday-section">
+        <div class="birthday-section-header">
+          <div class="birthday-header-left">
+            <div class="birthday-icon-wrap">🎂</div>
+            <div>
+              <div class="birthday-title">Cumpleañeros del Mes</div>
+              <div class="birthday-subtitle">Clientes que cumplen años este mes</div>
+            </div>
+          </div>
+          <div class="birthday-month-badge" id="birthday-month-badge">—</div>
+        </div>
+        <div class="birthday-list" id="birthday-list">
+          <div class="loading-overlay"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

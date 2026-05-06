@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulario Empleado — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+  
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> 
+        <a href="/empleados.html">Empleados</a> <span>›</span> 
+        <span id="form-breadcrumb">Nuevo</span>
+      </span>
+    </div>
+    <div class="page-content" style="max-width:900px;">
+      <div class="page-header">
+        <div>
+          <h1 id="form-title">Nuevo Empleado</h1>
+          <p>Completa los datos del empleado</p>
+        </div>
+      </div>
+      
+      <div class="form-section">
+        <div class="form-section-title">👔 Datos del Empleado</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Número de Empleado *</label>
+            <input type="text" id="numero_empleado" placeholder="EMP-001">
+          </div>
+          <div class="form-group">
+            <label>DPI *</label>
+            <input type="text" id="dpi" placeholder="Número de DPI">
+          </div>
+          <div class="form-group form-col-full">
+            <label>Nombre Completo *</label>
+            <input type="text" id="nombre_completo" placeholder="Nombre completo del empleado">
+          </div>
+          <div class="form-group">
+            <label>Cargo</label>
+            <input type="text" id="cargo" placeholder="Analista, Coordinador...">
+          </div>
+          <div class="form-group">
+            <label>Dependencia</label>
+            <select id="id_dependencia">
+              <option value="">Sin asignar</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Estado</label>
+            <select id="estado">
+              <option value="Activo">Activo</option>
+              <option value="Inactivo">Inactivo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Nacimiento</label>
+            <input type="date" id="fecha_nacimiento">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="tel" id="telefono" placeholder="55551234">
+          </div>
+          <div class="form-group">
+            <label>Correo Personal</label>
+            <input type="email" id="correo" placeholder="correo@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Correo Empresarial</label>
+            <input type="email" id="correo_empresarial" placeholder="nombre@empresa.com">
+          </div>
+          <div class="form-group">
+            <label>Correo Alternativo</label>
+            <input type="email" id="correo_personal" placeholder="correo.alternativo@gmail.com">
+          </div>
+          <div class="form-group">
+            <label>Red Social</label>
+            <input type="text" id="red_social" placeholder="LinkedIn, Instagram...">
+          </div>
+          <div class="form-group form-col-full">
+            <label>Dirección</label>
+            <input type="text" id="direccion" placeholder="Dirección de residencia">
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <a href="/empleados.html" class="btn btn-ghost">Cancelar</a>
+        <button class="btn btn-gold" onclick="guardar()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    var EMPLEADO_ID = (function(){
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('id');
+      if (!raw) return null;
+      const parsed = parseInt(raw, 10);
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+    })();
+  </script>
+  <script src="js/empleados.js"></script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulario Cliente — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .form-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+    .form-tab {
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text2);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+    }
+    .form-tab:hover {
+      color: var(--text1);
+    }
+    .form-tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+    .tab-content {
+      display: none;
+      padding: 24px;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .form-card {
+      background: var(--surface1);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .contacto-card {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 16px;
+      background: var(--surface2);
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .contacto-card .form-group {
+      flex: 1;
+      margin: 0;
+    }
+    .contacto-card .btn-remove {
+      margin-top: 24px;
+    }
+    .contactos-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .empty-contactos {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text2);
+    }
+    .empty-contactos-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+    }
+    .error-msg {
+      color: var(--danger);
+      font-size: 0.75rem;
+      margin-top: 4px;
+    }
+    .input-error {
+      border-color: var(--danger) !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+  
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> 
+        <a href="/clientes.html">Clientes</a> <span>›</span> 
+        <span id="form-breadcrumb">Nuevo</span>
+      </span>
+    </div>
+    <div class="page-content" style="max-width:700px;">
+      <div class="page-header">
+        <div>
+          <h1 id="form-title">Nuevo Cliente</h1>
+          <p>Completa los datos del cliente o prospecto</p>
+        </div>
+      </div>
+      
+      <div class="form-card">
+        <!-- Tabs -->
+        <div class="form-tabs">
+          <button type="button" class="form-tab active" data-tab="datos" onclick="cambiarTab('datos')">
+            Datos Generales
+          </button>
+          <button type="button" class="form-tab" data-tab="contactos" onclick="cambiarTab('contactos')">
+            Contactos
+          </button>
+        </div>
+
+        <!-- Tab: Datos Generales -->
+        <div id="tab-datos" class="tab-content active">
+          <div class="form-grid">
+            <div class="form-group form-col-full">
+              <label>Nombre o Razón Social <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="nombre_razon_social" placeholder="Ingrese el nombre o razón social">
+              <div id="error-nombre" class="error-msg" style="display:none;"></div>
+            </div>
+            <div class="form-group form-col-full">
+              <label>Documento de Identificación <span style="color:var(--danger)">*</span></label>
+              <input type="text" id="documento_identificacion" placeholder="Ingrese el documento de identificación">
+              <div id="error-documento" class="error-msg" style="display:none;"></div>
+            </div>
+            <div class="form-group">
+              <label>Fecha de Nacimiento</label>
+              <input type="date" id="fecha_nacimiento">
+            </div>
+            <div class="form-group">
+              <label>Tipo <span style="color:var(--danger)">*</span></label>
+              <select id="tipo">
+                <option value="">Seleccione un tipo</option>
+              </select>
+              <div id="error-tipo" class="error-msg" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Contactos -->
+        <div id="tab-contactos" class="tab-content">
+          <div class="contactos-header">
+            <span style="font-weight:500;color:var(--text1);">Información de Contacto</span>
+            <button type="button" class="btn btn-gold btn-sm" onclick="agregarContacto()">
+              ＋ Agregar Contacto
+            </button>
+          </div>
+          
+          <div id="contactos-container">
+            <!-- Los contactos se agregan dinámicamente -->
+          </div>
+          
+          <div id="contactos-empty" class="empty-contactos">
+            <div class="empty-contactos-icon">📱</div>
+            <div>No hay contactos agregados.</div>
+            <div style="font-size:0.85rem;margin-top:4px;">Haz clic en "Agregar Contacto" para añadir uno.</div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions" style="padding:16px 24px;border-top:1px solid var(--border);background:var(--surface2);">
+          <a href="/clientes.html" class="btn btn-ghost">Cancelar</a>
+          <button class="btn btn-gold" id="btn-guardar" onclick="guardarCliente()">💾 Guardar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    var CLIENTE_ID = (function(){
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      return id ? parseInt(id) : null;
+    })();
+  </script>
+  <script src="js/clientes.js"></script>
+</body>
+</html>

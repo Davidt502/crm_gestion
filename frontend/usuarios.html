@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuarios — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Usuarios
+      </span>
+    </div>
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <h1>👤 Gestión de Usuarios</h1>
+          <p>Administración de accesos al sistema · Solo administradores</p>
+        </div>
+        <a href="/form_usuario.html" class="btn btn-gold">＋ Nuevo Usuario</a>
+      </div>
+
+      <div class="search-bar">
+        <div class="form-group">
+          <label>Buscar por nombre o usuario</label>
+          <input type="text" id="search-nombre" placeholder="Nombre o nombre de usuario...">
+        </div>
+        <div class="form-group" style="max-width:160px;">
+          <label>Estado</label>
+          <select id="search-estado">
+            <option value="">Todos</option>
+            <option value="Activo">Activo</option>
+            <option value="Inactivo">Inactivo</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <button class="btn btn-gold" onclick="buscar()">🔍 Buscar</button>
+          <button class="btn btn-ghost" onclick="limpiar()">✕</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Usuario</th>
+              <th>Correo</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="usuarios-tbody">
+            <tr><td colspan="6" class="loading-overlay"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+        <div class="pagination" id="paginacion" style="display:none;">
+          <span class="pagination-info" id="pag-info"></span>
+          <div class="pagination-controls" id="pag-controls"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal desactivar -->
+  <div class="modal-overlay" id="modal-desactivar">
+    <div class="modal">
+      <div class="modal-icon warning">⚠️</div>
+      <div class="modal-title">¿Desactivar usuario?</div>
+      <div class="modal-body">El usuario no podrá iniciar sesión mientras esté inactivo. Esta acción es reversible.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-desactivar')">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmarDesactivar()">Desactivar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal reactivar -->
+  <div class="modal-overlay" id="modal-reactivar">
+    <div class="modal">
+      <div class="modal-icon" style="background:rgba(46,204,138,.12);border:1px solid rgba(46,204,138,.3);">✅</div>
+      <div class="modal-title">¿Reactivar usuario?</div>
+      <div class="modal-body">El usuario recuperará el acceso al sistema con su rol asignado.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-reactivar')">Cancelar</button>
+        <button class="btn btn-gold" onclick="confirmarReactivar()">Reactivar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/usuarios.js"></script>
+</body>
+</html>

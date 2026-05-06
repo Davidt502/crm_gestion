@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRM — Panel de Auditoría</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .audit-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:28px; }
+    .audit-card { background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;text-align:center; }
+    .audit-card .num { font-size:2rem;font-weight:700;color:#3b82f6; }
+    .audit-card .lbl { font-size:13px;color:#64748b;margin-top:4px; }
+    .audit-card.red .num { color:#ef4444; }
+    .audit-card.green .num { color:#22c55e; }
+    .audit-card.purple .num { color:#8b5cf6; }
+
+    .filters { background:#fff;border-radius:12px;padding:20px;border:1px solid #e2e8f0;margin-bottom:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end; }
+    .filters label { font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px; }
+    .filters input, .filters select { padding:7px 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;min-width:120px; }
+    .filters .btn-filter { padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer; }
+    .filters .btn-clear  { padding:8px 16px;background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;cursor:pointer; }
+
+    .table-wrap { background:#fff;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden; }
+    table { width:100%;border-collapse:collapse;font-size:13px; }
+    th { background:#f8fafc;padding:10px 14px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0; }
+    td { padding:9px 14px;border-bottom:1px solid #f1f5f9;vertical-align:middle; }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#f8fafc; }
+
+    .badge { display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600; }
+    .badge-web     { background:#dbeafe;color:#1d4ed8; }
+    .badge-api     { background:#f3e8ff;color:#7c3aed; }
+    .badge-login   { background:#dcfce7;color:#15803d; }
+    .badge-ver     { background:#f1f5f9;color:#475569; }
+    .badge-crear   { background:#dcfce7;color:#15803d; }
+    .badge-editar  { background:#fef9c3;color:#854d0e; }
+    .badge-eliminar{ background:#fee2e2;color:#991b1b; }
+    .badge-exportar{ background:#fde68a;color:#78350f; }
+    .badge-copiar  { background:#ffedd5;color:#9a3412; }
+    .badge-fallido { background:#fee2e2;color:#991b1b; }
+    .badge-ok      { background:#dcfce7;color:#15803d; }
+
+    .pagination { display:flex;justify-content:center;align-items:center;gap:8px;padding:16px; }
+    .pagination button { padding:6px 12px;border:1px solid #e2e8f0;border-radius:7px;background:#fff;cursor:pointer;font-size:13px; }
+    .pagination button:disabled { opacity:.4;cursor:not-allowed; }
+    .pagination .current { background:#3b82f6;color:#fff;border-color:#3b82f6; }
+
+    .empty-state { text-align:center;padding:50px;color:#94a3b8; }
+    .loading { text-align:center;padding:30px;color:#94a3b8; }
+
+    .token-section { background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:24px;margin-top:24px; }
+    .token-section h3 { margin:0 0 16px;font-size:16px;color:#1e293b; }
+    .token-form { display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;align-items:flex-end; }
+    .token-form input,.token-form select { padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px; }
+    .btn-crear-token { padding:8px 18px;background:#3b82f6;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:13px; }
+    .token-result { background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;margin-bottom:16px;display:none; }
+    .token-result code { font-size:12px;word-break:break-all;background:#dcfce7;padding:6px 10px;border-radius:5px;display:block;margin-top:6px; }
+    .tokens-list { overflow-x:auto; }
+  </style>
+</head>
+<body>
+  <div id="sidebar-container"></div>
+  <div id="toast-container"></div>
+
+  <div class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">🔒 Panel de Auditoría</h1>
+      <p class="page-subtitle">Registro completo de accesos, acciones y uso del sistema</p>
+    </div>
+
+    <!-- Estadísticas -->
+    <div class="audit-grid" id="stats-grid">
+      <div class="audit-card"><div class="num" id="st-total">—</div><div class="lbl">Accesos (30 días)</div></div>
+      <div class="audit-card"><div class="num" id="st-web">—</div><div class="lbl">Accesos Web</div></div>
+      <div class="audit-card purple"><div class="num" id="st-api">—</div><div class="lbl">Accesos API Pública</div></div>
+      <div class="audit-card red"><div class="num" id="st-fail">—</div><div class="lbl">Accesos Fallidos</div></div>
+      <div class="audit-card"><div class="num" id="st-ips">—</div><div class="lbl">IPs Únicas</div></div>
+      <div class="audit-card green"><div class="num" id="st-users">—</div><div class="lbl">Usuarios Activos</div></div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="filters">
+      <div><label>Usuario</label><input type="text" id="f-username" placeholder="username..."></div>
+      <div><label>IP</label><input type="text" id="f-ip" placeholder="192.168.x.x"></div>
+      <div><label>Recurso</label>
+        <select id="f-recurso">
+          <option value="">Todos</option>
+          <option>clientes</option><option>empleados</option><option>proveedores</option>
+          <option>compras</option><option>usuarios</option><option>auth</option><option>api_tokens</option>
+        </select>
+      </div>
+      <div><label>Acción</label>
+        <select id="f-accion">
+          <option value="">Todas</option>
+          <option>ver</option><option>buscar</option><option>crear</option><option>editar</option>
+          <option>eliminar</option><option>exportar</option><option>copiar</option>
+          <option>login</option><option>logout</option>
+        </select>
+      </div>
+      <div><label>Tipo</label>
+        <select id="f-tipo">
+          <option value="">Todos</option>
+          <option value="web">Web</option>
+          <option value="api_publica">API Pública</option>
+        </select>
+      </div>
+      <div><label>Desde</label><input type="date" id="f-desde"></div>
+      <div><label>Hasta</label><input type="date" id="f-hasta"></div>
+      <button class="btn-filter" onclick="cargarAuditoria(1)">🔍 Filtrar</button>
+      <button class="btn-clear"  onclick="limpiarFiltros()">✕ Limpiar</button>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-wrap">
+      <div id="tabla-body"><div class="loading">Cargando registros...</div></div>
+      <div class="pagination" id="paginacion"></div>
+    </div>
+
+    <!-- Gestión de Tokens API Públicos -->
+    <div class="token-section" id="token-section" style="display:none;">
+      <h3>🔑 Tokens de API Pública</h3>
+      <p style="font-size:13px;color:#64748b;margin:0 0 16px;">
+        Crea tokens para compartir endpoints con compañeros sin que necesiten cuenta en el sistema.
+        Cada acceso quedará registrado en la auditoría con su IP y acciones realizadas.
+      </p>
+      <div class="token-form">
+        <div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Nombre del token</label>
+          <input type="text" id="tk-nombre" placeholder="Ej: Equipo Ventas - Solo lectura" style="min-width:220px;"></div>
+        <div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Descripción</label>
+          <input type="text" id="tk-desc" placeholder="Para qué sirve..." style="min-width:200px;"></div>
+        <div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Permisos</label>
+          <select id="tk-tipo">
+            <option value="1">Solo lectura (GET)</option>
+            <option value="0">Lectura y escritura</option>
+          </select></div>
+        <div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:4px;">Expira</label>
+          <input type="date" id="tk-expira"></div>
+        <button class="btn-crear-token" onclick="crearToken()">+ Crear Token</button>
+      </div>
+
+      <div class="token-result" id="token-result">
+        <strong>✅ Token creado — guárdalo ahora, no se mostrará completo después:</strong>
+        <code id="token-value"></code>
+        <small style="color:#64748b;display:block;margin-top:8px;">
+          Uso: <code style="background:#e0f2fe;padding:2px 6px;border-radius:4px;">GET /api/clientes?api_token=TOKEN</code>
+          &nbsp;o&nbsp;
+          <code style="background:#e0f2fe;padding:2px 6px;border-radius:4px;">Header: X-API-Token: TOKEN</code>
+        </small>
+      </div>
+
+      <div class="tokens-list">
+        <table>
+          <thead><tr><th>Nombre</th><th>Token</th><th>Propietario</th><th>Permisos</th><th>Usos</th><th>Último uso</th><th>Expira</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="tokens-tbody"><tr><td colspan="9" class="loading">Cargando tokens...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    requireAuth();
+    const user = getUser();
+    const esAdmin = user && user.rol === 'admin';
+
+    let paginaActual = 1;
+
+    async function cargarResumen() {
+      if (!esAdmin) return;
+      try {
+        const data = await apiJSON('/api/auditoria/resumen');
+        if (!data) return;
+        document.getElementById('st-total').textContent = data.total_accesos ?? 0;
+        document.getElementById('st-web').textContent   = data.accesos_web ?? 0;
+        document.getElementById('st-api').textContent   = data.accesos_api ?? 0;
+        document.getElementById('st-fail').textContent  = data.accesos_fallidos ?? 0;
+        document.getElementById('st-ips').textContent   = data.ips_unicas ?? 0;
+        document.getElementById('st-users').textContent = data.usuarios_activos ?? 0;
+      } catch(e) {}
+    }
+
+    async function cargarAuditoria(page = 1) {
+      paginaActual = page;
+      const tbody = document.getElementById('tabla-body');
+      tbody.innerHTML = '<div class="loading">Cargando...</div>';
+
+      const params = new URLSearchParams({ page });
+      const username = document.getElementById('f-username').value.trim();
+      const ip       = document.getElementById('f-ip').value.trim();
+      const recurso  = document.getElementById('f-recurso').value;
+      const accion   = document.getElementById('f-accion').value;
+      const tipo     = document.getElementById('f-tipo').value;
+      const desde    = document.getElementById('f-desde').value;
+      const hasta    = document.getElementById('f-hasta').value;
+      if (username) params.set('username', username);
+      if (ip)       params.set('ip', ip);
+      if (recurso)  params.set('recurso', recurso);
+      if (accion)   params.set('accion', accion);
+      if (tipo)     params.set('tipo_acceso', tipo);
+      if (desde)    params.set('fecha_desde', desde);
+      if (hasta)    params.set('fecha_hasta', hasta);
+
+      try {
+        const data = await apiJSON(`/api/auditoria?${params}`);
+        if (!data) return;
+        renderTabla(data);
+      } catch(e) {
+        tbody.innerHTML = '<div class="empty-state">⚠️ Error al cargar registros. Verifica permisos de administrador.</div>';
+      }
+    }
+
+    function badgeAccion(accion) {
+      const map = { ver:'ver',buscar:'ver',crear:'crear',editar:'editar',eliminar:'eliminar',exportar:'exportar',copiar:'copiar',login:'login' };
+      const cls = map[accion] || 'ver';
+      return `<span class="badge badge-${cls}">${escapeHtml(accion)}</span>`;
+    }
+
+    function renderTabla(data) {
+      const tbody = document.getElementById('tabla-body');
+      if (!data.registros || data.registros.length === 0) {
+        tbody.innerHTML = '<div class="empty-state">📭 No hay registros con los filtros actuales.</div>';
+        document.getElementById('paginacion').innerHTML = '';
+        return;
+      }
+      let html = `<table><thead><tr>
+        <th>Fecha / Hora</th><th>Usuario</th><th>Grupo</th>
+        <th>IP Pública</th><th>Tipo</th><th>Acción</th>
+        <th>Recurso</th><th>Estado</th><th>Detalle</th>
+      </tr></thead><tbody>`;
+
+      for (const r of data.registros) {
+        const tipoBadge = r.tipo_acceso === 'api_publica'
+          ? '<span class="badge badge-api">API Pública</span>'
+          : '<span class="badge badge-web">Web</span>';
+        const estadoBadge = r.exitoso
+          ? '<span class="badge badge-ok">✓ OK</span>'
+          : '<span class="badge badge-fallido">✗ Fallido</span>';
+        const detalle = r.detalle ? `<span title="${escapeHtml(r.detalle)}" style="cursor:help;font-size:16px;">📋</span>` : '';
+        html += `<tr>
+          <td style="white-space:nowrap;font-size:12px;">${escapeHtml(r.fecha_hora)}</td>
+          <td><strong>${escapeHtml(r.username||'—')}</strong><br><small style="color:#94a3b8;">${escapeHtml(r.nombre_usuario||'')}</small></td>
+          <td><small>${escapeHtml(r.grupo||'—')}</small></td>
+          <td style="font-family:monospace;font-size:12px;">${escapeHtml(r.ip_publica)}</td>
+          <td>${tipoBadge}</td>
+          <td>${badgeAccion(r.accion)}</td>
+          <td>${escapeHtml(r.recurso||'—')}${r.id_recurso?' #'+escapeHtml(r.id_recurso):''}</td>
+          <td>${estadoBadge}</td>
+          <td>${detalle}</td>
+        </tr>`;
+      }
+      html += '</tbody></table>';
+      tbody.innerHTML = html;
+
+      // Paginación
+      const pag = document.getElementById('paginacion');
+      const paginas = data.paginas || 1;
+      if (paginas <= 1) { pag.innerHTML = ''; return; }
+      let ph = `<button onclick="cargarAuditoria(${paginaActual-1})" ${paginaActual===1?'disabled':''}>← Anterior</button>`;
+      ph += `<span style="font-size:13px;color:#64748b;">Página ${paginaActual} de ${paginas} · ${data.total} registros</span>`;
+      ph += `<button onclick="cargarAuditoria(${paginaActual+1})" ${paginaActual>=paginas?'disabled':''}>Siguiente →</button>`;
+      pag.innerHTML = ph;
+    }
+
+    function limpiarFiltros() {
+      ['f-username','f-ip','f-desde','f-hasta'].forEach(id => document.getElementById(id).value = '');
+      ['f-recurso','f-accion','f-tipo'].forEach(id => document.getElementById(id).value = '');
+      cargarAuditoria(1);
+    }
+
+    // ── Tokens API Pública ──────────────────────────────────
+    async function cargarTokens() {
+      try {
+        const data = await apiJSON('/api/tokens');
+        if (!data) return;
+        const tbody = document.getElementById('tokens-tbody');
+        if (!data.tokens || data.tokens.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:#94a3b8;padding:20px;">No hay tokens creados.</td></tr>';
+          return;
+        }
+        let html = '';
+        for (const t of data.tokens) {
+          html += `<tr>
+            <td><strong>${escapeHtml(t.nombre_token)}</strong><br><small style="color:#94a3b8;">${escapeHtml(t.descripcion||'')}</small></td>
+            <td style="font-family:monospace;font-size:12px;">${escapeHtml(t.token_preview)}</td>
+            <td>${escapeHtml(t.propietario||'—')}</td>
+            <td>${t.solo_lectura?'<span class="badge badge-web">Solo lectura</span>':'<span class="badge badge-crear">Escritura</span>'}</td>
+            <td>${t.total_usos||0}</td>
+            <td style="font-size:12px;">${t.ultimo_uso||'—'}</td>
+            <td style="font-size:12px;">${t.expira_en||'Sin expiración'}</td>
+            <td>${t.activo?'<span class="badge badge-ok">Activo</span>':'<span class="badge badge-fallido">Inactivo</span>'}</td>
+            <td><button onclick="revocarToken(${t.id_token},'${escapeHtml(t.nombre_token)}')" style="padding:4px 10px;background:#fee2e2;color:#991b1b;border:none;border-radius:5px;cursor:pointer;font-size:12px;">Revocar</button></td>
+          </tr>`;
+        }
+        tbody.innerHTML = html;
+      } catch(e) {}
+    }
+
+    async function crearToken() {
+      const nombre = document.getElementById('tk-nombre').value.trim();
+      if (!nombre) { showToast('El nombre del token es requerido.', 'error'); return; }
+      const body = {
+        nombre,
+        descripcion: document.getElementById('tk-desc').value.trim(),
+        solo_lectura: document.getElementById('tk-tipo').value === '1',
+        expira_en: document.getElementById('tk-expira').value || null,
+        endpoints_permitidos: [],
+      };
+      try {
+        const data = await apiJSON('/api/tokens', { method:'POST', body: JSON.stringify(body) });
+        if (!data) return;
+        document.getElementById('token-value').textContent = data.token;
+        document.getElementById('token-result').style.display = 'block';
+        showToast('Token creado correctamente.', 'success');
+        cargarTokens();
+      } catch(e) { showToast('Error al crear token: ' + e.message, 'error'); }
+    }
+
+    async function revocarToken(id, nombre) {
+      if (!confirm(`¿Revocar el token "${nombre}"? Esta acción no se puede deshacer.`)) return;
+      try {
+        await apiJSON(`/api/tokens/${id}`, { method:'DELETE' });
+        showToast('Token revocado.', 'success');
+        cargarTokens();
+      } catch(e) { showToast('Error al revocar: ' + e.message, 'error'); }
+    }
+
+    // ── Inicializar ──────────────────────────────────────────
+    if (!esAdmin) {
+      document.querySelector('.page-subtitle').textContent = '⚠️ Solo los administradores pueden ver la auditoría completa.';
+      document.getElementById('tabla-body').innerHTML = '<div class="empty-state">🔒 Acceso restringido a administradores.</div>';
+      document.getElementById('stats-grid').style.display = 'none';
+    } else {
+      cargarResumen();
+      cargarAuditoria(1);
+      document.getElementById('token-section').style.display = 'block';
+      cargarTokens();
+    }
+  </script>
+</body>
+</html>

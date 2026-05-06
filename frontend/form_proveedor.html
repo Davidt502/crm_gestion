@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Formulario Proveedor — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+  
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> 
+        <a href="/proveedores.html">Proveedores</a> <span>›</span> 
+        <span id="form-breadcrumb">Nuevo</span>
+      </span>
+    </div>
+    <div class="page-content" style="max-width:900px;">
+      <div class="page-header">
+        <div>
+          <h1 id="form-title">Nuevo Proveedor</h1>
+          <p>Completa los datos del proveedor</p>
+        </div>
+      </div>
+      
+      <div class="form-section">
+        <div class="form-section-title">🏢 Datos del Proveedor</div>
+        <div class="form-grid">
+          <div class="form-group form-col-full">
+            <label>Nombre de la Empresa *</label>
+            <input type="text" id="nombre_empresa" placeholder="Nombre de la empresa">
+          </div>
+          <div class="form-group">
+            <label>NIT *</label>
+            <input type="text" id="nit" placeholder="12345678-9">
+          </div>
+          <div class="form-group">
+            <label>Categoría *</label>
+            <select id="id_categoria">
+              <option value="">Cargando...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Teléfono *</label>
+            <input type="tel" id="telefono" placeholder="22334455">
+          </div>
+          <div class="form-group">
+            <label>Correo</label>
+            <input type="email" id="correo" placeholder="ventas@empresa.com">
+          </div>
+          <div class="form-group">
+            <label>Contacto Principal</label>
+            <input type="text" id="contacto" placeholder="Nombre del contacto">
+          </div>
+          <div class="form-group form-col-full">
+            <label>Dirección</label>
+            <input type="text" id="direccion" placeholder="Dirección completa">
+          </div>
+          <div class="form-group form-col-full">
+            <label>Notas</label>
+            <textarea id="notas" placeholder="Observaciones..."></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <a href="/proveedores.html" class="btn btn-ghost">Cancelar</a>
+        <button class="btn btn-gold" onclick="guardar()">💾 Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script>
+    // Obtener ID del proveedor de la URL (para edición)
+    var PROVEEDOR_ID = (function(){
+      const params = new URLSearchParams(window.location.search);
+      const raw = params.get('id');
+      if (!raw) return null;
+      const parsed = parseInt(raw, 10);
+      // Validar que sea un entero positivo válido (rechaza NaN, 0, negativos)
+      return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+    })();
+  </script>
+  <script src="js/proveedores.js"></script>
+</body>
+</html>

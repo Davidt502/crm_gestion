@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nueva Compra — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+  
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> 
+        <a href="/compras.html">Compras</a> <span>›</span> Nueva
+      </span>
+    </div>
+    <div class="page-content" style="max-width:900px;">
+      <div class="page-header">
+        <div><h1>Nueva Compra</h1><p>Registra una compra a proveedor</p></div>
+      </div>
+      
+      <div class="form-section">
+        <div class="form-section-title">🛒 Datos de la Compra</div>
+        <div class="form-grid">
+          <div class="form-group form-col-full">
+            <label>Proveedor *</label>
+            <select id="id_proveedor">
+              <option value="">Selecciona un proveedor...</option>
+            </select>
+          </div>
+          <div class="form-group form-col-full">
+            <label>Productos / Descripción *</label>
+            <textarea id="productos" rows="3" placeholder="Describe los productos o servicios adquiridos..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Monto Total (Q) *</label>
+            <input type="number" id="monto_total" placeholder="0.00" step="0.01" min="0">
+          </div>
+          <div class="form-group">
+            <label>Estado de Pago</label>
+            <select id="estado_pago">
+              <option value="Pendiente">Pendiente</option>
+              <option value="Pagado">Pagado</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha de Compra</label>
+            <input type="date" id="fecha_compra">
+          </div>
+          <div class="form-group form-col-full">
+            <label>Notas</label>
+            <textarea id="notas" placeholder="Observaciones adicionales..."></textarea>
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-actions">
+        <a href="/compras.html" class="btn btn-ghost">Cancelar</a>
+        <button class="btn btn-gold" onclick="guardar()">💾 Registrar Compra</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/compras.js"></script>
+</body>
+</html>

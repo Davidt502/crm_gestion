@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compras — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+  
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Compras
+      </span>
+    </div>
+    <div class="page-content">
+      <div class="page-header">
+        <div><h1>🛒 Compras</h1><p>Registro de compras a proveedores</p></div>
+        <a href="/form_compra.html" class="btn btn-gold">＋ Nueva Compra</a>
+      </div>
+      
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+        <div class="stat-card indigo">
+          <div class="stat-top"><div class="stat-icon">📋</div></div>
+          <div class="stat-value" id="st-total">—</div>
+          <div class="stat-label">Total Compras</div>
+        </div>
+        <div class="stat-card emerald">
+          <div class="stat-top"><div class="stat-icon">💰</div></div>
+          <div class="stat-value" id="st-monto">—</div>
+          <div class="stat-label">Monto Total</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-top"><div class="stat-icon">⏳</div></div>
+          <div class="stat-value" id="st-pend">—</div>
+          <div class="stat-label">Pendientes</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-top"><div class="stat-icon">✅</div></div>
+          <div class="stat-value" id="st-pag">—</div>
+          <div class="stat-label">Pagadas</div>
+        </div>
+      </div>
+      
+      <div class="search-bar">
+        <div class="form-group">
+          <label>Proveedor</label>
+          <input type="text" id="search-proveedor" placeholder="Nombre del proveedor...">
+        </div>
+        <div class="form-group" style="max-width:150px;">
+          <label>Estado Pago</label>
+          <select id="search-estado">
+            <option value="">Todos</option>
+            <option>Pendiente</option>
+            <option>Pagado</option>
+            <option value="Anulado">Anulado</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <button class="btn btn-gold" onclick="buscar()">🔍 Buscar</button>
+          <button class="btn btn-ghost" onclick="limpiar()">✕</button>
+        </div>
+      </div>
+      
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Proveedor</th>
+              <th>Productos</th>
+              <th>Monto</th>
+              <th>Estado Pago</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <tr><td colspan="6" class="loading-overlay"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+        <div class="pagination" id="paginacion" style="display:none;">
+          <span class="pagination-info" id="pag-info"></span>
+          <div class="pagination-controls" id="pag-controls"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal cambiar estado -->
+  <div class="modal-overlay" id="modal-estado">
+    <div class="modal">
+      <div class="modal-icon">💳</div>
+      <div class="modal-title">Cambiar Estado de Pago</div>
+      <div class="modal-body" style="text-align:left;">
+        <div class="form-group">
+          <label>Nuevo Estado</label>
+          <select id="nuevo-estado">
+            <option value="Pagado">Pagado</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Anulado">Anulado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-estado')">Cancelar</button>
+        <button class="btn btn-gold" onclick="confirmarEstado()">Actualizar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/compras.js"></script>
+</body>
+</html>

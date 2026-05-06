@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:5000;">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proveedores — CRM Ing Software</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Sidebar se inyecta via JS -->
+
+  <div class="main">
+    <div class="topbar">
+      <span class="topbar-breadcrumb">
+        <a href="/dashboard.html">🏠 Dashboard</a> <span>›</span> Proveedores
+      </span>
+    </div>
+    <div class="page-content">
+      <div class="page-header">
+        <div><h1>🏢 Proveedores</h1><p>Gestión de proveedores y categorías</p></div>
+        <a href="/form_proveedor.html" class="btn btn-gold">＋ Nuevo Proveedor</a>
+      </div>
+
+      <!-- INCONSISTENCIA #2 CORREGIDA: placeholder correcto + campo único busca nombre O NIT -->
+      <div class="search-bar">
+        <div class="form-group">
+          <label>Buscar por nombre o NIT</label>
+          <input type="text" id="search-nombre" placeholder="Nombre de empresa o NIT...">
+        </div>
+        <div class="form-group" style="max-width:200px;">
+          <label>Categoría</label>
+          <select id="search-categoria"><option value="">Todas las categorías</option></select>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-end;">
+          <button class="btn btn-gold" onclick="buscar()">🔍 Buscar</button>
+          <button class="btn btn-ghost" onclick="limpiar()">✕</button>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>NIT</th>
+              <th>Categoría</th>
+              <th>Teléfono</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="proveedores-tbody">
+            <tr><td colspan="6" class="loading-overlay"><div class="spinner"></div></td></tr>
+          </tbody>
+        </table>
+
+        <div class="pagination" id="paginacion" style="display:none;">
+          <span class="pagination-info" id="pag-info"></span>
+          <div class="pagination-controls" id="pag-controls"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal inactivar -->
+  <div class="modal-overlay" id="modal-inactivar">
+    <div class="modal">
+      <div class="modal-icon warning">⚠️</div>
+      <div class="modal-title">Inactivar Proveedor</div>
+      <div class="modal-body">
+        <div class="form-group" style="text-align:left;">
+          <label>Motivo de inactivación *</label>
+          <input type="text" id="motivo-inactivacion" placeholder="Escribe el motivo...">
+          <div style="color:#ef4444;font-size:.72rem;margin-top:3px;display:none;" id="motivo-error">
+            El motivo es obligatorio.
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-inactivar')">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmarInactivar()">Inactivar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal activar (MEJORA: reemplaza confirm() nativo del navegador) -->
+  <div class="modal-overlay" id="modal-activar">
+    <div class="modal">
+      <div class="modal-icon" style="background:rgba(46,204,138,.12);border:1px solid rgba(46,204,138,.3);">✅</div>
+      <div class="modal-title">Activar Proveedor</div>
+      <div class="modal-body">¿Deseas activar este proveedor? Podrá volver a usarse en nuevas compras.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-activar')">Cancelar</button>
+        <button class="btn btn-gold" onclick="confirmarActivar()">Activar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal eliminar -->
+  <div class="modal-overlay" id="modal-eliminar">
+    <div class="modal">
+      <div class="modal-icon warning">🗑️</div>
+      <div class="modal-title">¿Eliminar proveedor?</div>
+      <div class="modal-body">Esta acción es permanente y no se puede deshacer. Solo es posible si el proveedor no tiene compras registradas.</div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="cerrarModal('modal-eliminar')">Cancelar</button>
+        <button class="btn btn-danger" onclick="confirmarEliminar()">Eliminar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+  <script src="js/config.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/proveedores.js"></script>
+</body>
+</html>
