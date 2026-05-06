@@ -45,7 +45,7 @@ app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
 # CORS — solo orígenes configurados
-CORS(app, origins=CORS_ORIGINS, supports_credentials=True)
+CORS(app, origins=os.getenv("CORS_ORIGINS", "*"), supports_credentials=True)
 
 # Blueprints
 app.register_blueprint(proveedor_bp)
