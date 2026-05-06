@@ -135,9 +135,9 @@ def get_all_empleados(nombre=None, dependencia=None, estado=None, page=1, per_pa
                 LEFT JOIN dependencias d ON e.id_dependencia = d.id_dependencia
                 WHERE {where_str}
                 ORDER BY e.fecha_creacion DESC
-                OFFSET %s ROWS FETCH NEXT %s ROWS ONLY
+                LIMIT %s OFFSET %s
                 """,
-                params + [offset, per_page],
+                params + [per_page, offset],
             )
             rows = cursor.fetchall()
 
