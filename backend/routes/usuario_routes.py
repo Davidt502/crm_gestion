@@ -20,8 +20,27 @@ logger = logging.getLogger(__name__)
 
 usuario_bp = Blueprint("usuarios", __name__, url_prefix="/api/usuarios")
 
+# Importar después de definir blueprint
+from middleware.auth_middleware import token_required
+
 _MAX_FIELD = 256
-_MIN_PASSWORD_LEN = 6
+_MIN_PASSWORD_LEN = 8  # Aumentado para mayor seguridad
+_EMAIL_REGEX = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+_USERNAME_REGEX = r"^[a-zA-Z0-9_-]{3,32}$"
+
+import re
+
+
+def _is_valid_email(email: str) -> bool:
+    if not email or len(email) > 254:
+        return False
+    return re.match(_EMAIL_REGEX, email) is not None
+
+
+def _is_valid_username(username: str) -> bool:
+    if not username:
+        return False
+    return re.match(_USERNAME_REGEX, username) is not None
 
 
 def _sanitize(value, max_len=500) -> str:

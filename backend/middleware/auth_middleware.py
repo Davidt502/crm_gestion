@@ -30,6 +30,7 @@ def token_required(f):
         token = _extract_token()
 
         if not token:
+            logger.warning("Token de autenticación faltante desde %s", request.remote_addr)
             return jsonify({"error": "Token de autenticación requerido"}), 401
 
         try:
@@ -37,9 +38,10 @@ def token_required(f):
             # de confusión de algoritmo (CVE-2015-9235 style)
             payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         except jwt.ExpiredSignatureError:
+            logger.warning("Token expirado desde %s", request.remote_addr)
             return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
         except jwt.InvalidTokenError as exc:
-            logger.warning("Token inválido: %s", exc)
+            logger.warning("Token inválido desde %s: %s", request.remote_addr, exc)
             return jsonify({"error": "Token inválido"}), 401
 
         request.current_user = payload

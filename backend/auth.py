@@ -20,12 +20,20 @@ def verificar_login(username: str, password: str):
     Verifica credenciales de usuario.
     Retorna (dict_usuario, None) si son correctas, o (None, str_error) si no.
     """
-    # Validación básica de entrada
+    # Validación básica de entrada con límites estrictos
     if not username or not password:
         return None, "Usuario o contraseña incorrectos."
 
-    username = username.strip()[:_MAX_FIELD_LEN]
+    username = str(username).strip()[:_MAX_FIELD_LEN]
+    password = str(password)
+    
+    # Evitar intentos de ataque con contraseñas gigantes
     if len(password) > _MAX_FIELD_LEN:
+        logger.warning("Intento de login con contraseña muy larga desde: %s", username)
+        return None, "Usuario o contraseña incorrectos."
+    
+    # Validar que username no sea vacío tras sanitizar
+    if not username or len(username) < 3:
         return None, "Usuario o contraseña incorrectos."
 
     try:

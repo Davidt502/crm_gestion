@@ -18,7 +18,7 @@ from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 import jwt
 
-from config import SECRET_KEY, DEBUG, CORS_ORIGINS, JWT_EXPIRY_HOURS
+from config import SECRET_KEY, DEBUG, CORS_ORIGINS, JWT_EXPIRY_HOURS, ENFORCE_HTTPS, RATE_LIMIT_WINDOW, RATE_LIMIT_LOGIN_ATTEMPTS, RATE_LIMIT_API_ATTEMPTS
 from middleware.auth_middleware import token_required, get_usuario
 
 import auth as auth_mod
@@ -56,39 +56,59 @@ app.register_blueprint(api_publica_bp)
 
 
 # ── Cabeceras de seguridad HTTP ───────────────────────────────
+@app.before_request
+def enforce_https():
+    """Forzar HTTPS en producción."""
+    if ENFORCE_HTTPS and request.scheme != "https":
+        return jsonify({"error": "Se requiere conexión HTTPS"}), 403
+
+
 @app.after_request
 def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["X-XSS-Protection"] = "1; mode=block"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    # Ajusta CSP según tus necesidades reales en producción
-    response.headers["Content-Security-Policy"] = "default-src 'self'"
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'"
     if not DEBUG:
-        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+        response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     return response
 
 
-# ── Rate limit simple en memoria para el endpoint de login ────
+# ── Rate limit simple en memoria ────
 import threading
+from time import monotonic as current_time
 _login_attempts: dict[str, list[float]] = {}
-_login_lock = threading.Lock()
-_LOGIN_WINDOW_SEC   = 60   # ventana de tiempo
-_LOGIN_MAX_ATTEMPTS = 5    # intentos máximos por IP en la ventana (reducido de 10 → 5)
+_api_attempts: dict[str, list[float]] = {}
+_rate_lock = threading.Lock()
 
 
-def _is_rate_limited(ip: str) -> bool:
-    import time
-    now = time.monotonic()
-    with _login_lock:
-        attempts = _login_attempts.get(ip, [])
+def _is_rate_limited(ip: str, limit_type: str = "login") -> bool:
+    """Verifica si una IP ha excedido el límite de intentos.
+    
+    Parámetros:
+      - limit_type: 'login' o 'api'
+    """
+    if limit_type == "login":
+        attempts_dict = _login_attempts
+        window = RATE_LIMIT_WINDOW
+        max_attempts = RATE_LIMIT_LOGIN_ATTEMPTS
+    else:
+        attempts_dict = _api_attempts
+        window = RATE_LIMIT_WINDOW
+        max_attempts = RATE_LIMIT_API_ATTEMPTS
+
+    now = current_time()
+    with _rate_lock:
+        attempts = attempts_dict.get(ip, [])
         # Purgar intentos fuera de la ventana
-        attempts = [t for t in attempts if now - t < _LOGIN_WINDOW_SEC]
-        if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
-            _login_attempts[ip] = attempts
+        attempts = [t for t in attempts if now - t < window]
+        if len(attempts) >= max_attempts:
+            attempts_dict[ip] = attempts
             return True
         attempts.append(now)
-        _login_attempts[ip] = attempts
+        attempts_dict[ip] = attempts
     return False
 
 
@@ -109,19 +129,34 @@ def generate_token(user_data: dict) -> str:
 # ── Manejo global de errores ──────────────────────────────────
 @app.errorhandler(400)
 def bad_request(e):
+    logger.warning("Bad request: %s", request.path)
     return jsonify({"error": "Solicitud inválida"}), 400
+
+
+@app.errorhandler(403)
+def forbidden(e):
+    return jsonify({"error": "Acceso denegado"}), 403
+
 
 @app.errorhandler(404)
 def not_found(e):
     return jsonify({"error": "Recurso no encontrado"}), 404
 
+
 @app.errorhandler(405)
 def method_not_allowed(e):
+    logger.warning("Method not allowed: %s %s", request.method, request.path)
     return jsonify({"error": "Método no permitido"}), 405
+
+
+@app.errorhandler(429)
+def rate_limit_exceeded(e):
+    return jsonify({"error": "Demasiadas solicitudes. Intenta más tarde."}), 429
+
 
 @app.errorhandler(500)
 def internal_error(e):
-    logger.error("Error interno: %s", e, exc_info=True)
+    logger.error("Error interno no capturado: %s", e, exc_info=True)
     return jsonify({"error": "Error interno del servidor"}), 500
 
 
@@ -136,7 +171,7 @@ def health_check():
 def api_login():
     ip = request.remote_addr or "unknown"
 
-    if _is_rate_limited(ip):
+    if _is_rate_limited(ip, "login"):
         logger.warning("Rate limit excedido para IP: %s", ip)
         return jsonify({"error": "Demasiados intentos. Espera un momento."}), 429
 

@@ -39,6 +39,13 @@ JWT_SECRET = os.getenv("JWT_SECRET", SECRET_KEY)
 # DEBUG solo en desarrollo — en producción establecer FLASK_DEBUG=false
 DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
 
+# Enforcer HTTPS en producción
+ENFORCE_HTTPS = os.getenv("ENFORCE_HTTPS", "true").lower() == "true" and not DEBUG
+
+# Versionado de API
+API_VERSION = "v1"
+API_BASE_PATH = f"/api/{API_VERSION}"
+
 # ============================================================
 # CORS - URLs permitidas (frontend)
 # ============================================================
