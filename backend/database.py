@@ -1,25 +1,29 @@
 """
-database.py - Conexión a SQL Server con pymssql
+database.py - Conexión a PostgreSQL (Supabase) con psycopg2
 Usa context manager para evitar fugas de conexión.
 """
-import pymssql
+import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
-from decimal import Decimal
-from config import DB_CONFIG
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Configuración desde variables de entorno
+DB_CONFIG = {
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'port': int(os.getenv('DB_PORT', '5432')),
+    'database': os.getenv('DB_NAME', 'postgres'),
+    'user': os.getenv('DB_USER', 'postgres'),
+    'password': os.getenv('DB_PASSWORD'),
+    'sslmode': os.getenv('DB_SSLMODE', 'require')
+}
 
 
 def get_connection():
-    """Abre y retorna una conexión a SQL Server."""
-    return pymssql.connect(
-        server=DB_CONFIG['server'],
-        port=DB_CONFIG['port'],
-        user=DB_CONFIG['username'],
-        password=DB_CONFIG['password'],
-        database=DB_CONFIG['database'],
-        charset='UTF-8',
-        login_timeout=10,
-        timeout=30,
-    )
+    """Abre y retorna una conexión a PostgreSQL."""
+    return psycopg2.connect(**DB_CONFIG)
 
 
 @contextmanager
@@ -53,35 +57,85 @@ def db_connection():
                 pass
 
 
+@contextmanager
+def db_connection_dict():
+    """
+    Context manager que retorna cursor con resultados como diccionarios.
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        yield conn, cursor
+        conn.commit()
+    except Exception:
+        if conn:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+        raise
+    finally:
+        if conn:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 def to_int(value):
-    """
-    Convierte Decimal o int a int.
-    SQL Server a través de pymssql retorna Decimal, esta función
-    normaliza el valor a int para compatibilidad.
-    """
-    if isinstance(value, Decimal):
+    """Convierte valor a int de forma segura."""
+    if value is None:
+        return None
+    try:
         return int(value)
-    if isinstance(value, int):
-        return value
-    return None
+    except (ValueError, TypeError):
+        return None
 
 
 def sp_result(row):
     """
-    Interpreta la fila de retorno estándar de los Stored Procedures del CRM.
-
-    Todos los SPs de este proyecto devuelven (codigo, mensaje) donde:
-      - codigo < 50000  → éxito real (es el ID del registro creado/actualizado)
-      - codigo >= 50000 → error del SP (50001 = duplicado, 50002 = no encontrado, etc.)
-
+    Interpreta la fila de retorno estándar de los Stored Procedures/Funciones del CRM.
+    
+    Todas las funciones de este proyecto devuelven (id, mensaje) donde:
+      - id != None y > 0 → éxito real (es el ID del registro creado/actualizado)
+      - id == None → error del SP
+    
     Retorna una tupla (id_or_none, mensaje, is_error):
-      - is_error=True  → el SP reportó un error, id_or_none=None
+      - is_error=True  → la función reportó un error, id_or_none=None
       - is_error=False → operación exitosa, id_or_none=int con el ID real
     """
     if row is None:
         return None, "Sin respuesta del servidor.", True
-    codigo = to_int(row[0])
-    mensaje = row[1] if len(row) > 1 else ""
-    if codigo is not None and codigo >= 50000:
+    
+    # row puede ser un dict o una tupla
+    if isinstance(row, dict):
+        id_val = row.get('id_cliente_result') or row.get('id_proveedor_result') or row.get('id_usuario_result') or row.get('id_contacto_result') or row.get('id_empleado_result')
+        mensaje = row.get('mensaje_result', '')
+    else:
+        id_val = row[0] if len(row) > 0 else None
+        mensaje = row[1] if len(row) > 1 else ""
+    
+    id_val = to_int(id_val)
+    
+    if id_val is None or id_val < 0:
         return None, mensaje, True
-    return codigo, mensaje, False
+    
+    return id_val, mensaje, False
+
+
+def ejecutar_funcion(nombre_funcion, *args):
+    """
+    Ejecuta una función de PostgreSQL y retorna su resultado.
+    """
+    with db_connection() as (conn, cursor):
+        # Construir la llamada con placeholders
+        placeholders = ','.join(['%s'] * len(args))
+        query = f"SELECT * FROM {nombre_funcion}({placeholders})"
+        cursor.execute(query, args)
+        
+        # Obtener resultados
+        if cursor.description:
+            row = cursor.fetchone()
+            return row
+        return None
