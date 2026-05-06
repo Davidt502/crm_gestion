@@ -20,10 +20,6 @@ api_publica_bp = Blueprint("api_publica", __name__)
 
 # ── Validar token público ──────────────────────────────────────
 def validar_token_publico(token_str: str) -> tuple:
-    """
-    Verifica que el token público sea válido y no esté expirado.
-    Retorna (dict_token, None) o (None, str_error).
-    """
     if not token_str:
         return None, "Token requerido."
 
@@ -34,7 +30,7 @@ def validar_token_publico(token_str: str) -> tuple:
                 SELECT t.id_token, t.nombre_token, t.endpoints_permitidos,
                        t.solo_lectura, t.activo, t.expira_en,
                        u.nombre, u.username,
-                       ISNULL(g.nombre_grupo,'') AS grupo
+                       COALESCE(g.nombre_grupo, '') AS grupo
                 FROM api_tokens t
                 JOIN usuarios u ON t.id_usuario = u.id_usuario
                 LEFT JOIN grupos g ON u.id_grupo = g.id_grupo
@@ -54,8 +50,7 @@ def validar_token_publico(token_str: str) -> tuple:
                 return None, "Token inactivo."
 
             if expira_en:
-                # expira_en viene como datetime naive (SQL Server)
-                if datetime.utcnow() > expira_en:
+                if datetime.now(timezone.utc) > expira_en.replace(tzinfo=timezone.utc):
                     return None, "Token expirado."
 
             # Actualizar estadísticas de uso
@@ -63,7 +58,7 @@ def validar_token_publico(token_str: str) -> tuple:
                 """
                 UPDATE api_tokens SET
                     total_usos = total_usos + 1,
-                    ultimo_uso = GETDATE()
+                    ultimo_uso = NOW()
                 WHERE id_token = %s
                 """,
                 [id_token],
@@ -91,14 +86,8 @@ def validar_token_publico(token_str: str) -> tuple:
 
 # ── Decorator para endpoints públicos ─────────────────────────
 def token_publico_required(f):
-    """
-    Decorator para endpoints que aceptan acceso mediante token público.
-    El token se pasa como header: X-API-Token: <token>
-    o como query param: ?api_token=<token>
-    """
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Buscar token en header o query param
         token_str = (
             request.headers.get("X-API-Token") or
             request.args.get("api_token") or
@@ -117,11 +106,10 @@ def token_publico_required(f):
             )
             return jsonify({"error": error}), 401
 
-        # Verificar que el endpoint esté permitido
         endpoint_actual = request.path
         endpoints_permitidos = token_info.get("endpoints", [])
 
-        if endpoints_permitidos:  # Lista vacía = acceso a todo
+        if endpoints_permitidos:
             permitido = any(
                 endpoint_actual.startswith(ep.rstrip("*"))
                 for ep in endpoints_permitidos
@@ -137,11 +125,9 @@ def token_publico_required(f):
                 )
                 return jsonify({"error": "Este token no tiene acceso a este endpoint."}), 403
 
-        # Solo lectura: bloquear métodos de escritura
         if token_info["solo_lectura"] and request.method not in ("GET", "HEAD", "OPTIONS"):
             return jsonify({"error": "Este token es de solo lectura."}), 403
 
-        # Inyectar info del token en g para auditoría
         g.token_publico = token_info
         g.current_user_audit = {
             "id_usuario": None,
@@ -150,7 +136,6 @@ def token_publico_required(f):
             "grupo": token_info["grupo"],
         }
 
-        # Registrar acceso
         registrar_auditoria(
             tipo_acceso="api_publica",
             id_token_publico=token_info["id_token"],
@@ -161,11 +146,10 @@ def token_publico_required(f):
     return decorated
 
 
-# ── CRUD de tokens públicos (solo admins/usuarios autenticados) ──
+# ── CRUD de tokens públicos ────────────────────────────────────
 @api_publica_bp.route("/api/tokens", methods=["GET"])
 @token_required
 def listar_tokens():
-    """Lista los tokens del usuario autenticado (admins ven todos)."""
     user = getattr(request, "current_user", {})
     es_admin = user.get("rol") == "admin"
 
@@ -178,7 +162,7 @@ def listar_tokens():
                            t.endpoints_permitidos, t.solo_lectura, t.activo,
                            t.expira_en, t.total_usos, t.ultimo_uso,
                            t.fecha_creacion, u.nombre AS propietario,
-                           LEFT(t.token, 8) + '...' AS token_preview
+                           LEFT(t.token, 8) || '...' AS token_preview
                     FROM api_tokens t
                     JOIN usuarios u ON t.id_usuario = u.id_usuario
                     ORDER BY t.fecha_creacion DESC
@@ -191,7 +175,7 @@ def listar_tokens():
                            t.endpoints_permitidos, t.solo_lectura, t.activo,
                            t.expira_en, t.total_usos, t.ultimo_uso,
                            t.fecha_creacion, u.nombre AS propietario,
-                           LEFT(t.token, 8) + '...' AS token_preview
+                           LEFT(t.token, 8) || '...' AS token_preview
                     FROM api_tokens t
                     JOIN usuarios u ON t.id_usuario = u.id_usuario
                     WHERE t.id_usuario = (
@@ -212,12 +196,9 @@ def listar_tokens():
                         t["endpoints_permitidos"] = json.loads(t["endpoints_permitidos"])
                     except Exception:
                         t["endpoints_permitidos"] = []
-                if t.get("expira_en"):
-                    t["expira_en"] = str(t["expira_en"])
-                if t.get("ultimo_uso"):
-                    t["ultimo_uso"] = str(t["ultimo_uso"])
-                if t.get("fecha_creacion"):
-                    t["fecha_creacion"] = str(t["fecha_creacion"])
+                for field in ("expira_en", "ultimo_uso", "fecha_creacion"):
+                    if t.get(field):
+                        t[field] = str(t[field])
                 tokens.append(t)
 
         return jsonify({"tokens": tokens, "total": len(tokens)})
@@ -229,7 +210,6 @@ def listar_tokens():
 @api_publica_bp.route("/api/tokens", methods=["POST"])
 @token_required
 def crear_token():
-    """Crea un nuevo token público."""
     if not request.is_json:
         return jsonify({"error": "Content-Type debe ser application/json"}), 400
 
@@ -238,19 +218,18 @@ def crear_token():
     if not nombre:
         return jsonify({"error": "El nombre del token es requerido."}), 400
 
-    descripcion = str(data.get("descripcion", "")).strip()[:500]
-    endpoints   = data.get("endpoints_permitidos", [])  # [] = acceso total
+    descripcion  = str(data.get("descripcion", "")).strip()[:500]
+    endpoints    = data.get("endpoints_permitidos", [])
     solo_lectura = bool(data.get("solo_lectura", True))
-    expira_en   = data.get("expira_en")  # ISO date string o None
+    expira_en    = data.get("expira_en")
 
     if not isinstance(endpoints, list):
         endpoints = []
 
-    # Generar token seguro
-    nuevo_token = secrets.token_urlsafe(48)
+    nuevo_token   = secrets.token_urlsafe(48)
     endpoints_json = json.dumps(endpoints)
 
-    user = getattr(request, "current_user", {})
+    user     = getattr(request, "current_user", {})
     username = user.get("username")
 
     try:
@@ -268,13 +247,13 @@ def crear_token():
                 INSERT INTO api_tokens
                     (nombre_token, token, descripcion, id_usuario,
                      endpoints_permitidos, solo_lectura, activo, expira_en, usuario_creacion)
-                VALUES (%s, %s, %s, %s, %s, %s, 1, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, TRUE, %s, %s)
+                RETURNING id_token
                 """,
                 [nombre, nuevo_token, descripcion, id_usuario,
-                 endpoints_json, 1 if solo_lectura else 0, expira_en, username],
+                 endpoints_json, solo_lectura, expira_en, username],
             )
-            cursor.execute("SELECT SCOPE_IDENTITY()")
-            new_id = int(cursor.fetchone()[0])
+            new_id = cursor.fetchone()[0]
 
         registrar_auditoria(accion="crear", recurso="api_tokens", id_recurso=str(new_id))
         return jsonify({
@@ -292,8 +271,7 @@ def crear_token():
 @api_publica_bp.route("/api/tokens/<int:id_token>", methods=["DELETE"])
 @token_required
 def revocar_token(id_token: int):
-    """Revoca (desactiva) un token."""
-    user = getattr(request, "current_user", {})
+    user     = getattr(request, "current_user", {})
     username = user.get("username")
     es_admin = user.get("rol") == "admin"
 
@@ -301,12 +279,12 @@ def revocar_token(id_token: int):
         with db_connection() as (conn, cursor):
             if es_admin:
                 cursor.execute(
-                    "UPDATE api_tokens SET activo = 0 WHERE id_token = %s", [id_token]
+                    "UPDATE api_tokens SET activo = FALSE WHERE id_token = %s", [id_token]
                 )
             else:
                 cursor.execute(
                     """
-                    UPDATE api_tokens SET activo = 0
+                    UPDATE api_tokens SET activo = FALSE
                     WHERE id_token = %s AND id_usuario = (
                         SELECT id_usuario FROM usuarios WHERE username = %s
                     )
