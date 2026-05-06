@@ -319,4 +319,3 @@ async function guardar() {
     btn.textContent = '💾 Registrar Compra';
   }
 }
-
