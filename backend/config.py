@@ -17,7 +17,7 @@ DB_CONFIG = {
     "database": os.getenv("DB_NAME", "crm_ing_software"),
     "username": os.getenv("DB_USER", "sa"),
     "password": os.getenv("DB_PASSWORD", ""),   # NUNCA hardcodear
-    "port":     int(os.getenv("DB_PORT", "1433")),
+    "port": int(os.getenv("DB_PORT", "5432")),
 }
 
 # Genera una clave segura: python -c "import secrets; print(secrets.token_hex(32))"
