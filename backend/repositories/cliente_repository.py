@@ -43,9 +43,9 @@ def find_all(where_clauses, params, offset, per_page):
                        notificacion_email, notificacion_sms, fecha_creacion
                 FROM clientes WHERE {where_str}
                 ORDER BY fecha_creacion DESC
-                OFFSET %s ROWS FETCH NEXT %s ROWS ONLY
+                LIMIT %s OFFSET %s
                 """,
-                params + [offset, per_page],
+                params + [per_page, offset],
             )
             rows = cursor.fetchall()
 
