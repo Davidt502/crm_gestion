@@ -91,7 +91,8 @@ function renderTabla(items, total, page, per_page) {
           title="${escapeHtml(c.productos)}">${escapeHtml(c.productos)}</td>
       <td>Q${parseFloat(c.monto_total).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       <td><span class="badge ${badgeClase(c.estado_pago)}">${escapeHtml(c.estado_pago)}</span></td>
-      <td class="td-actions">
+      <td class="td-actions" style="display:flex;gap:4px;">
+        <a href="/form_compra.html?id=${c.id_compra}" class="btn btn-ghost btn-sm btn-icon" title="Editar">✏️</a>
         <button class="btn btn-ghost btn-sm"
           data-id="${c.id_compra}"
           data-estado="${escapeHtml(c.estado_pago)}"
@@ -169,6 +170,12 @@ async function confirmarEstado() {
 }
 
 /* ═══════════════════════ FORMULARIO ══════════════════════════ */
+const COMPRA_ID = (function(){
+  const p = new URLSearchParams(window.location.search);
+  const id = p.get('id');
+  return id ? parseInt(id) : null;
+})();
+
 if (isForm) {
   document.addEventListener('DOMContentLoaded', async () => {
     if (!requireAuth()) return;
@@ -176,7 +183,46 @@ if (isForm) {
     const fechaEl = document.getElementById('fecha_compra');
     if (fechaEl && !fechaEl.value) fechaEl.value = hoy;
     await cargarProveedoresActivos();
+    if (COMPRA_ID) {
+      // Modo edición
+      const breadcrumb = document.getElementById('compra-breadcrumb');
+      const title      = document.getElementById('compra-title');
+      if (breadcrumb) breadcrumb.textContent = 'Editar';
+      if (title)      title.textContent = 'Editar Compra';
+      await cargarDatosCompra(COMPRA_ID);
+    }
   });
+}
+
+async function cargarDatosCompra(id) {
+  try {
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/compras/${id}`, {
+      headers: getHeaders(false)
+    });
+    const d = await res.json();
+    if (d.error) { showToast(d.error, 'error'); return; }
+
+    // Esperar a que los proveedores carguen antes de setear valor
+    const sel = document.getElementById('id_proveedor');
+    const waitSel = () => new Promise(resolve => {
+      const check = () => { if (!sel.disabled) resolve(); else setTimeout(check, 50); };
+      check();
+    });
+    await waitSel();
+
+    sel.value = d.id_proveedor;
+    document.getElementById('productos').value    = d.productos   || '';
+    document.getElementById('monto_total').value  = d.monto_total || '';
+    document.getElementById('estado_pago').value  = d.estado_pago || 'Pendiente';
+    document.getElementById('fecha_compra').value = d.fecha_compra || '';
+    document.getElementById('notas').value        = d.notas || '';
+
+    // Cambiar botón guardar
+    const btn = document.querySelector('.btn-gold[onclick="guardar()"]');
+    if (btn) btn.textContent = '💾 Actualizar Compra';
+  } catch (e) {
+    showToast('Error al cargar los datos de la compra.', 'error');
+  }
 }
 
 /* BUG #2 CORREGIDO: solo carga proveedores activos */
@@ -245,8 +291,10 @@ async function guardar() {
   btn.textContent = 'Guardando...';
 
   try {
-    const res = await fetch(`${CONFIG.API_BASE_URL}/api/compras`, {
-      method:  'POST',
+    const url    = COMPRA_ID ? `${CONFIG.API_BASE_URL}/api/compras/${COMPRA_ID}` : `${CONFIG.API_BASE_URL}/api/compras`;
+    const method = COMPRA_ID ? 'PUT' : 'POST';
+    const res = await fetch(url, {
+      method,
       headers: getHeaders(),
       body:    JSON.stringify(payload)
     });
@@ -271,3 +319,4 @@ async function guardar() {
     btn.textContent = '💾 Registrar Compra';
   }
 }
+
