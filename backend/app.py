@@ -24,7 +24,6 @@ from middleware.auth_middleware import token_required, get_usuario
 import auth as auth_mod
 import empleados as empleados_mod
 import compras as compras_mod
-import google_auth as google_auth_mod
 from auditoria import registrar_auditoria, get_ip_publica
 
 from services import cliente_service
@@ -185,52 +184,7 @@ def api_login():
     return jsonify({"error": error or "Credenciales incorrectas"}), 401
 
 
-@app.route("/api/auth/login/google", methods=["POST"])
-def api_login_google():
-    """Login / registro con Google OAuth. Recibe el id_token de Google Sign-In."""
-    ip = get_ip_publica()
-
-    if _is_rate_limited(ip):
-        return jsonify({"error": "Demasiados intentos. Espera un momento."}), 429
-
-    if not request.is_json:
-        return jsonify({"error": "Content-Type debe ser application/json"}), 400
-
-    data = request.get_json(silent=True) or {}
-    id_token_google = str(data.get("id_token", "")).strip()
-
-    if not id_token_google:
-        return jsonify({"error": "id_token de Google requerido."}), 400
-
-    # 1. Verificar con Google
-    google_user, error = google_auth_mod.verificar_google_token(id_token_google)
-    if error:
-        registrar_auditoria(accion="login", recurso="auth", exitoso=False,
-                            codigo_respuesta=401, detalle={"tipo": "google", "error": error})
-        return jsonify({"error": error}), 401
-
-    # 2. Crear / recuperar usuario en BD
-    usuario, error = google_auth_mod.login_o_crear_usuario_google(google_user)
-    if error:
-        registrar_auditoria(accion="login", recurso="auth", exitoso=False,
-                            codigo_respuesta=401, detalle={"tipo": "google", "error": error})
-        return jsonify({"error": error}), 401
-
-    token = generate_token(usuario)
-    logger.info("Google login exitoso: %s desde %s", usuario["username"], ip)
-    registrar_auditoria(accion="login", recurso="auth", exitoso=True, codigo_respuesta=200,
-                        detalle={"tipo": "google", "username": usuario["username"]})
-    return jsonify({
-        "success": True,
-        "token": token,
-        "user": {
-            "username": usuario["username"],
-            "nombre":   usuario["nombre"],
-            "rol":      usuario["rol"],
-            "grupo":    usuario.get("grupo", ""),
-            "picture":  google_user.get("picture", ""),
-        },
-    })
+# ── Rutas de Cliente ──────────────────────────────────────────
 
 
 @app.route("/api/auth/verify", methods=["GET"])
