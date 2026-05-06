@@ -128,7 +128,7 @@ def get_all_empleados(nombre=None, dependencia=None, estado=None, page=1, per_pa
                 f"""
                 SELECT e.id_empleado, e.numero_empleado, e.dpi, e.nombre_completo,
                        e.cargo, e.id_dependencia,
-                       ISNULL(d.nombre_dependencia, 'Sin asignar') AS dependencia,
+                       COALESCE(d.nombre_dependencia, 'Sin asignar') AS dependencia,
                        e.estado, e.fecha_nacimiento, e.correo, e.telefono,
                        e.direccion, e.fecha_creacion
                 FROM empleados e
@@ -154,7 +154,7 @@ def get_empleado_by_id(id_empleado):
                 """
                 SELECT e.id_empleado, e.numero_empleado, e.dpi, e.nombre_completo,
                        e.cargo, e.id_dependencia,
-                       ISNULL(d.nombre_dependencia,'Sin asignar'),
+                       COALESCE(d.nombre_dependencia,'Sin asignar'),
                        e.estado, e.fecha_nacimiento, e.correo, e.telefono,
                        e.direccion, e.fecha_creacion
                 FROM empleados e
@@ -172,7 +172,7 @@ def get_empleado_by_id(id_empleado):
             cursor.execute(
                 """
                 SELECT h.fecha_movimiento,
-                       ISNULL(do.nombre_dependencia,'Inicio') AS origen,
+                       COALESCE(do.nombre_dependencia,'Inicio') AS origen,
                        dd.nombre_dependencia AS destino,
                        h.motivo, h.usuario
                 FROM historial_dependencia h

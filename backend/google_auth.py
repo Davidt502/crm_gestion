@@ -64,7 +64,7 @@ def login_o_crear_usuario_google(google_user: dict) -> tuple:
             cursor.execute(
                 """
                 SELECT u.id_usuario, u.nombre, u.username, u.rol, u.estado,
-                       ISNULL(g.nombre_grupo, '') AS grupo
+                       COALESCE(g.nombre_grupo, '') AS grupo
                 FROM usuarios u
                 LEFT JOIN grupos g ON u.id_grupo = g.id_grupo
                 WHERE u.google_id = %s
@@ -78,7 +78,7 @@ def login_o_crear_usuario_google(google_user: dict) -> tuple:
                 cursor.execute(
                     """
                     SELECT u.id_usuario, u.nombre, u.username, u.rol, u.estado,
-                           ISNULL(g.nombre_grupo, '') AS grupo
+                           COALESCE(g.nombre_grupo, '') AS grupo
                     FROM usuarios u
                     LEFT JOIN grupos g ON u.id_grupo = g.id_grupo
                     WHERE u.email = %s OR u.google_email = %s

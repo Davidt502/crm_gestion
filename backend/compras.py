@@ -170,7 +170,7 @@ def update_estado_pago(id_compra, estado_pago, usuario="sistema"):
 def get_stats_compras():
     try:
         with db_connection() as (conn, cursor):
-            cursor.execute("SELECT COUNT(*), ISNULL(SUM(monto_total),0) FROM compras_proveedor")
+            cursor.execute("SELECT COUNT(*), COALESCE(SUM(monto_total),0) FROM compras_proveedor")
             r1 = cursor.fetchone()
             cursor.execute("SELECT COUNT(*) FROM compras_proveedor WHERE estado_pago='Pendiente'")
             pendientes = cursor.fetchone()[0]
