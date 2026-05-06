@@ -206,13 +206,13 @@ def find_cumpleaneros_mes():
             cursor.execute(
                 """
                 SELECT nombre_razon_social,
-                       DAY(fecha_nacimiento) AS dia,
-                       YEAR(GETDATE()) - YEAR(fecha_nacimiento) AS edad
+                       EXTRACT(DAY FROM fecha_nacimiento)::int AS dia,
+                       EXTRACT(YEAR FROM NOW())::int - EXTRACT(YEAR FROM fecha_nacimiento)::int AS edad
                 FROM clientes
-                WHERE MONTH(fecha_nacimiento) = MONTH(GETDATE())
+                WHERE EXTRACT(MONTH FROM fecha_nacimiento) = EXTRACT(MONTH FROM NOW())
                   AND fecha_nacimiento IS NOT NULL
                   AND estado = 'Activo'
-                ORDER BY DAY(fecha_nacimiento)
+                ORDER BY EXTRACT(DAY FROM fecha_nacimiento)
                 """
             )
             rows = cursor.fetchall()

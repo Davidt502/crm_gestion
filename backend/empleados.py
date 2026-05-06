@@ -63,7 +63,7 @@ def create_dependencia(data):
                 "INSERT INTO dependencias (nombre_dependencia, usuario_creacion) VALUES (%s, %s)",
                 [nombre, _sanitize_str(data.get("usuario", "sistema"))],
             )
-            cursor.execute("SELECT SCOPE_IDENTITY()")
+            cursor.execute("SELECT lastval()")
             new_id = int(cursor.fetchone()[0])
 
         return {"id_dependencia": new_id, "mensaje": "Dependencia creada exitosamente."}

@@ -155,7 +155,7 @@ def update_estado_pago(id_compra, estado_pago, usuario="sistema"):
                 """
                 UPDATE compras_proveedor
                 SET estado_pago = %s,
-                    fecha_modificacion = GETDATE(),
+                    fecha_modificacion = NOW(),
                     usuario_modificacion = %s
                 WHERE id_compra = %s
                 """,
