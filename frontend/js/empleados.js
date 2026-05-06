@@ -11,14 +11,17 @@ function getHeaders(includeContentType = true) {
 }
 
 /* ═══════════════════════════ LISTA ═══════════════════════════ */
-if(document.getElementById('tbody') && !document.getElementById('id_dependencia')){
-  document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
+  const isList = !!document.getElementById('tbody') && !document.getElementById('id_dependencia');
+  const isFormEmp = typeof EMPLEADO_ID !== 'undefined';
+
+  if (isList) {
     if (!requireAuth()) return;
     cargarDeps();
     cargar();
     cargarCumpleaneros();
-  });
-}
+  }
+});
 
 /* ═══════════════ CUMPLEAÑEROS DEL MES ═══════════════════════ */
 async function cargarCumpleaneros() {
@@ -249,9 +252,9 @@ async function cargarDatos(id){
     document.getElementById('fecha_nacimiento').value = d.fecha_nacimiento || '';
     document.getElementById('telefono').value = d.telefono || '';
     document.getElementById('correo').value = d.correo || '';
-    document.getElementById('correo_empresarial').value = d.correo_empresarial || '';
-    document.getElementById('correo_personal').value = d.correo_personal || '';
-    document.getElementById('red_social').value = d.red_social || '';
+    // correo_empresarial no existe en el backend — poblamos desde correo
+    if(document.getElementById('correo_empresarial')) 
+      document.getElementById('correo_empresarial').value = d.correo || '';
     document.getElementById('direccion').value = d.direccion || '';
   }catch(e){ showToast('Error al cargar datos.', 'error'); }
 }
@@ -272,6 +275,9 @@ async function guardar(){
   if(corrEmp && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(corrEmp))
     { showToast('Correo empresarial inválido.', 'error'); return; }
 
+  // El backend solo soporta el campo "correo" — usamos correo_empresarial si correo está vacío
+  const correoVal = document.getElementById('correo')?.value.trim() || corrEmp || null;
+
   const payload = {
     numero_empleado: numEmp,
     dpi,
@@ -280,12 +286,9 @@ async function guardar(){
     id_dependencia: document.getElementById('id_dependencia').value || null,
     estado: document.getElementById('estado').value,
     fecha_nacimiento: document.getElementById('fecha_nacimiento').value || null,
-    correo: document.getElementById('correo')?.value.trim() || null,
-    correo_empresarial: corrEmp || null,
-    correo_personal: document.getElementById('correo_personal')?.value.trim() || null,
+    correo: correoVal,
     telefono: telefono || null,
     direccion: document.getElementById('direccion').value.trim() || null,
-    red_social: document.getElementById('red_social')?.value.trim() || null,
   };
 
   const btn = document.querySelector('.btn-gold');
