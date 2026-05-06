@@ -142,3 +142,169 @@ async function confirmarInactivar() {
     }
     pendingInactivarId = null;
 }
+
+
+/* ═══════════════════ FORMULARIO CLIENTE ═══════════════════════
+   Se activa cuando CLIENTE_ID está definido (form_cliente.html)
+   ═══════════════════════════════════════════════════════════ */
+
+const TIPOS_CLIENTE = ['Cliente', 'Prospecto'];
+
+if (typeof CLIENTE_ID !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', async () => {
+        if (!requireAuth()) return;
+        cargarTipos();
+        if (CLIENTE_ID) {
+            document.getElementById('form-title').textContent     = 'Editar Cliente';
+            document.getElementById('form-breadcrumb').textContent = 'Editar';
+            await cargarDatosCliente(CLIENTE_ID);
+        }
+    });
+}
+
+function cargarTipos() {
+    const sel = document.getElementById('tipo');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seleccione un tipo</option>';
+    TIPOS_CLIENTE.forEach(t => {
+        const o = document.createElement('option');
+        o.value = t;
+        o.textContent = t;
+        sel.appendChild(o);
+    });
+}
+
+async function cargarDatosCliente(id) {
+    try {
+        const data = await apiJSON(`/api/clientes/${id}`);
+        if (!data) return;
+        const c = data.cliente || data;
+
+        const setVal = (elId, val) => {
+            const el = document.getElementById(elId);
+            if (el) el.value = val ?? '';
+        };
+
+        setVal('nombre_razon_social',      c.nombre_razon_social);
+        setVal('documento_identificacion', c.documento_identificacion);
+        setVal('fecha_nacimiento',         c.fecha_nacimiento);
+        setVal('tipo',                     c.tipo);
+
+        // Cargar contactos si existen
+        if (Array.isArray(c.contactos) && c.contactos.length) {
+            c.contactos.forEach(ct => agregarContacto(ct));
+        }
+    } catch (e) {
+        showToast('Error al cargar los datos del cliente.', 'error');
+    }
+}
+
+// ── Gestión de contactos ──────────────────────────────────────
+let contactoIndex = 0;
+const contactos = [];
+
+function agregarContacto(datos = {}) {
+    const idx  = contactoIndex++;
+    const wrap = document.getElementById('contactos-container');
+    const empty = document.getElementById('contactos-empty');
+    if (empty) empty.style.display = 'none';
+
+    const card = document.createElement('div');
+    card.className = 'contacto-card';
+    card.id = `contacto-${idx}`;
+    card.innerHTML = `
+        <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" id="ct-nombre-${idx}" value="${escapeHtml(datos.nombre || '')}" placeholder="Nombre del contacto">
+        </div>
+        <div class="form-group">
+            <label>Teléfono</label>
+            <input type="text" id="ct-telefono-${idx}" value="${escapeHtml(datos.telefono || '')}" placeholder="Teléfono">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="ct-email-${idx}" value="${escapeHtml(datos.email || '')}" placeholder="correo@ejemplo.com">
+        </div>
+        <button type="button" class="btn btn-danger btn-sm btn-icon btn-remove" title="Eliminar" onclick="eliminarContacto(${idx})">✕</button>
+    `;
+    wrap.appendChild(card);
+    contactos.push(idx);
+}
+
+function eliminarContacto(idx) {
+    const el = document.getElementById(`contacto-${idx}`);
+    if (el) el.remove();
+    const i = contactos.indexOf(idx);
+    if (i !== -1) contactos.splice(i, 1);
+    if (!contactos.length) {
+        const empty = document.getElementById('contactos-empty');
+        if (empty) empty.style.display = '';
+    }
+}
+
+function recopilarContactos() {
+    return contactos.map(idx => ({
+        nombre:   document.getElementById(`ct-nombre-${idx}`)?.value.trim()   || '',
+        telefono: document.getElementById(`ct-telefono-${idx}`)?.value.trim() || '',
+        email:    document.getElementById(`ct-email-${idx}`)?.value.trim()    || '',
+    })).filter(c => c.nombre || c.telefono || c.email);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────
+function cambiarTab(tab) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.form-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tab}`)?.classList.add('active');
+    document.querySelector(`[data-tab="${tab}"]`)?.classList.add('active');
+}
+
+// ── Validación y guardado ─────────────────────────────────────
+function mostrarError(id, msg) {
+    const el = document.getElementById(`error-${id}`);
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = msg ? '' : 'none';
+    const input = document.getElementById(id) || document.getElementById(`${id}_razon_social`);
+    if (input) input.classList.toggle('input-error', !!msg);
+}
+
+async function guardarCliente() {
+    let valido = true;
+
+    const nombre = document.getElementById('nombre_razon_social')?.value.trim();
+    const doc    = document.getElementById('documento_identificacion')?.value.trim();
+    const tipo   = document.getElementById('tipo')?.value;
+
+    mostrarError('nombre',    nombre ? '' : 'El nombre es obligatorio.');
+    mostrarError('documento', doc    ? '' : 'El documento es obligatorio.');
+    mostrarError('tipo',      tipo   ? '' : 'Selecciona un tipo.');
+
+    if (!nombre || !doc || !tipo) return;
+
+    const payload = {
+        nombre_razon_social:      nombre,
+        documento_identificacion: doc,
+        fecha_nacimiento: document.getElementById('fecha_nacimiento')?.value || null,
+        tipo,
+        contactos: recopilarContactos(),
+    };
+
+    const btn = document.getElementById('btn-guardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    try {
+        const isEdit  = typeof CLIENTE_ID !== 'undefined' && CLIENTE_ID;
+        const url     = isEdit ? `/api/clientes/${CLIENTE_ID}` : '/api/clientes';
+        const method  = isEdit ? 'PUT' : 'POST';
+        const data    = await apiJSON(url, { method, body: JSON.stringify(payload) });
+        if (!data) return;
+
+        showToast(data.mensaje || 'Cliente guardado exitosamente.', 'success');
+        setTimeout(() => { window.location.href = '/clientes.html'; }, 1200);
+    } catch (e) {
+        showToast(e.message || 'Error al guardar el cliente.', 'error');
+        btn.disabled = false;
+        btn.textContent = '💾 Guardar';
+    }
+}
