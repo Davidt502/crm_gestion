@@ -51,7 +51,7 @@ API_BASE_PATH = f"/api/{API_VERSION}"
 # ============================================================
 _origins_raw = os.getenv(
     "CORS_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8001,http://127.0.0.1:8001,http://localhost:5500,http://127.0.0.1:5500,http://192.168.56.101:3000,http://192.168.56.101:8080,http://192.168.56.101:8001,http://192.168.56.101:5500"
+    "https://crm-frontend-reg9.onrender.com,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080,http://localhost:8001,http://127.0.0.1:8001,http://localhost:5500,http://127.0.0.1:5500,http://192.168.56.101:3000,http://192.168.56.101:8080,http://192.168.56.101:8001,http://192.168.56.101:5500"
 )
 CORS_ORIGINS = [o.strip() for o in _origins_raw.split(",") if o.strip()]
 

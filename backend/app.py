@@ -45,10 +45,9 @@ app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
 # CORS — configuración mejorada
-cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "https://crm-frontend-reg9.onrender.com,http://localhost:5500").split(",") if o.strip()]
 CORS(
     app,
-    origins=cors_origins,
+    origins=CORS_ORIGINS,
     supports_credentials=True,
     allow_headers=['Content-Type', 'Authorization'],
     methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -74,8 +73,8 @@ def handle_preflight():
 
 @app.before_request
 def enforce_https():
-    """Forzar HTTPS en producción."""
-    if ENFORCE_HTTPS and request.scheme != "https":
+    """Forzar HTTPS en producción (excepto para preflight)."""
+    if ENFORCE_HTTPS and request.scheme != "https" and request.method != "OPTIONS":
         return jsonify({"error": "Se requiere conexión HTTPS"}), 403
 
 
