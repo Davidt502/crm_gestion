@@ -44,15 +44,17 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
-# CORS — configuración mejorada
+# CORS — configuración simplificada pero completa
 CORS(
     app,
-    origins=CORS_ORIGINS,
-    supports_credentials=True,
-    allow_headers=['Content-Type', 'Authorization'],
-    methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    expose_headers=['Content-Type'],
-    max_age=3600
+    resources={r"/api/*": {
+        "origins": CORS_ORIGINS,
+        "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "expose_headers": ["Content-Type"],
+        "supports_credentials": True,
+        "max_age": 3600
+    }}
 )
 
 # Blueprints
@@ -64,13 +66,6 @@ app.register_blueprint(api_publica_bp)
 
 
 # ── Cabeceras de seguridad HTTP ───────────────────────────────
-@app.before_request
-def handle_preflight():
-    """Maneja solicitudes OPTIONS preflight para CORS."""
-    if request.method == "OPTIONS":
-        return "", 200
-
-
 @app.before_request
 def enforce_https():
     """Forzar HTTPS en producción (excepto para preflight)."""
