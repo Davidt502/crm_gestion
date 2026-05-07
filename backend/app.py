@@ -245,6 +245,40 @@ def api_cumpleaneros():
     return jsonify({"cumpleaneros": cumpleaneros})
 
 
+# ── Endpoint de diagnóstico para debugging de cumpleaños ───────
+@app.route("/api/debug/cumpleaneros-info", methods=["GET"])
+@token_required
+def debug_cumpleaneros():
+    try:
+        from database import db_connection
+        with db_connection() as (conn, cursor):
+            cursor.execute("SELECT COUNT(*) FROM clientes")
+            total = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM clientes WHERE estado = 'Activo'")
+            activos = cursor.fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(*) FROM clientes WHERE fecha_nacimiento IS NOT NULL")
+            con_fecha = cursor.fetchone()[0]
+            
+            cursor.execute(
+                "SELECT COUNT(*) FROM clientes WHERE EXTRACT(MONTH FROM fecha_nacimiento) = EXTRACT(MONTH FROM NOW()) AND estado = 'Activo' AND fecha_nacimiento IS NOT NULL"
+            )
+            cumpleaneros_mes = cursor.fetchone()[0]
+        
+        return jsonify({
+            "info": {
+                "total_clientes": total,
+                "activos": activos,
+                "con_fecha_nacimiento": con_fecha,
+                "cumpleaneros_mes_actual": cumpleaneros_mes
+            }
+        }), 200
+    except Exception as exc:
+        logger.error("Debug error: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
+
+
 # ── Dependencias ──────────────────────────────────────────────
 @app.route("/api/dependencias", methods=["GET"])
 @token_required
