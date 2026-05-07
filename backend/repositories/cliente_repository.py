@@ -216,7 +216,9 @@ def find_cumpleaneros_mes():
                 """
             )
             rows = cursor.fetchall()
-        return [{"nombre": r[0], "dia": r[1], "edad": r[2]} for r in rows]
+        result = [{"nombre": r[0], "dia": r[1], "edad": r[2]} for r in rows]
+        logger.info(f"find_cumpleaneros_mes: found {len(result)} birthday records")
+        return result
     except Exception as exc:
         logger.error("find_cumpleaneros_mes: %s", exc, exc_info=True)
         return []
