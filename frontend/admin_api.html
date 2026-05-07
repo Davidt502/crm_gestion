@@ -146,6 +146,29 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 </head>
 <body>
 
+<!-- Auth Screen si no es admin -->
+<div id="auth-admin-screen" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px;">
+  <div style="max-width:500px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:20px;">🔐</div>
+    <h1 style="font-size:28px;font-weight:800;margin-bottom:10px;">Panel de Administrador</h1>
+    <p style="color:var(--muted);margin-bottom:32px;font-size:14px;">Solo administradores pueden acceder aquí</p>
+    
+    <div id="auth-admin-alert" style="display:none;padding:12px;border-radius:8px;margin-bottom:20px;border:1px solid var(--red);background:rgba(239,68,68,0.1);color:#fca5a5;font-size:13px;"></div>
+    
+    <div style="margin-bottom:20px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Usuario</label>
+      <input type="text" id="admin-username" placeholder="Tu usuario" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;outline:none;">
+    </div>
+    
+    <div style="margin-bottom:24px;">
+      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Contraseña</label>
+      <input type="password" id="admin-password" placeholder="Tu contraseña" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;outline:none;">
+    </div>
+    
+    <button onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:14px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">🔓 Iniciar Sesión</button>
+  </div>
+</div>
+
 <!-- Sidebar -->
 <div class="sidebar">
   <div class="sidebar-logo">CRM <span>Admin</span></div>
@@ -326,6 +349,93 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 <div id="toast"></div>
 <script src="js/config.js"></script>
 <script>
+// ─── Autenticación Admin ───────────────────────────────────
+
+function verificarAdmin() {
+  const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+  const user = getUser();
+  const authScreen = document.getElementById('auth-admin-screen');
+  const sidebar = document.querySelector('.sidebar');
+  
+  if (!token || !user || user.rol !== 'admin') {
+    // No hay token o no es admin - mostrar pantalla de login
+    if (authScreen) authScreen.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'none';
+    return false;
+  }
+  
+  // Es admin - mostrar panel
+  if (authScreen) authScreen.style.display = 'none';
+  if (sidebar) sidebar.style.display = 'flex';
+  return true;
+}
+
+function getUser() {
+  try {
+    const raw = localStorage.getItem(CONFIG.USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+async function loginAdmin() {
+  const username = document.getElementById('admin-username').value.trim();
+  const password = document.getElementById('admin-password').value;
+  const alertDiv = document.getElementById('auth-admin-alert');
+  
+  if (!username || !password) {
+    alertDiv.textContent = 'Usuario y contraseña son requeridos.';
+    alertDiv.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${CONFIG.API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok && data.token) {
+      const user = data.user || {};
+      
+      // Verificar que sea admin
+      if (user.rol !== 'admin') {
+        alertDiv.textContent = 'Solo administradores pueden acceder a este panel.';
+        alertDiv.style.display = 'block';
+        return;
+      }
+      
+      localStorage.setItem(CONFIG.TOKEN_KEY, data.token);
+      localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
+      alertDiv.style.display = 'none';
+      verificarAdmin();
+      loadStats();
+    } else {
+      alertDiv.textContent = data.error || 'Usuario o contraseña incorrectos.';
+      alertDiv.style.display = 'block';
+    }
+  } catch (e) {
+    alertDiv.textContent = 'Error de conexión.';
+    alertDiv.style.display = 'block';
+  }
+}
+
+// Verificar autenticación al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  if (verificarAdmin()) {
+    loadStats();
+  }
+  // Permitir login con Enter
+  const passInput = document.getElementById('admin-password');
+  if (passInput) {
+    passInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loginAdmin();
+    });
+  }
+});
+
 const API = CONFIG.API_BASE_URL;
 const token = () => localStorage.getItem(CONFIG.TOKEN_KEY);
 const headers = () => ({'Content-Type':'application/json','Authorization':'Bearer '+token()});

@@ -133,7 +133,37 @@ pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:
 <body>
 <div class="orb"></div>
 
-<nav>
+<!-- Auth Screen (se muestra si no hay login) -->
+<div id="auth-screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <div style="max-width:500px;width:100%;padding:24px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;">
+      <div style="font-size:48px;margin-bottom:20px;">🔐</div>
+      <h1 style="font-size:28px;font-weight:800;margin-bottom:10px;">Portal de API</h1>
+      <p style="color:var(--muted);margin-bottom:32px;font-size:14px;">Accede con tu cuenta del CRM para solicitar un token de API</p>
+      
+      <div id="auth-alert" class="alert" style="display:none;margin-bottom:20px;"></div>
+      
+      <div class="field">
+        <label>Usuario o Email</label>
+        <input type="text" id="auth-username" placeholder="Tu usuario o email" maxlength="150">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="auth-password" placeholder="Tu contraseña" maxlength="200">
+      </div>
+      
+      <button class="btn" onclick="intentarLogin()" style="width:100%;margin-bottom:16px;">
+        🔓 Iniciar Sesión
+      </button>
+      
+      <p style="font-size:13px;color:var(--muted);">
+        ¿No tienes cuenta? Contacta al administrador para crear una.
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content (se muestra después de login) -->
   <div class="nav-logo">CRM <span>API</span></div>
   <div class="nav-badge">v1.0 · REST · JSON</div>
 </nav>
@@ -316,6 +346,83 @@ curl -X GET https://crm-gestion.onrender.com/api/pub/empleados \
 
 <script src="js/config.js"></script>
 <script>
+// ─── Autenticación para Portal de API ───────────────────────────
+
+function verificarAutenticacion() {
+  const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+  const authScreen = document.getElementById('auth-screen');
+  const mainContent = document.querySelector('nav');
+  
+  if (!token) {
+    // No hay token, mostrar pantalla de login
+    if (authScreen) authScreen.style.display = 'flex';
+    if (mainContent) mainContent.style.display = 'none';
+    return false;
+  }
+  
+  // Hay token, mostrar contenido
+  if (authScreen) authScreen.style.display = 'none';
+  if (mainContent) mainContent.style.display = 'flex';
+  return true;
+}
+
+async function intentarLogin() {
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value;
+  const alertDiv = document.getElementById('auth-alert');
+  
+  if (!username || !password) {
+    alertDiv.textContent = 'Usuario y contraseña son requeridos.';
+    alertDiv.className = 'alert error';
+    alertDiv.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${CONFIG.API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok && data.token) {
+      localStorage.setItem(CONFIG.TOKEN_KEY, data.token);
+      if (data.user) localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(data.user));
+      alertDiv.style.display = 'none';
+      verificarAutenticacion();
+      showToast('✅ Bienvenido al Portal de API', 'success');
+    } else {
+      alertDiv.textContent = data.error || 'Usuario o contraseña incorrectos.';
+      alertDiv.className = 'alert error';
+      alertDiv.style.display = 'block';
+    }
+  } catch (e) {
+    alertDiv.textContent = 'Error de conexión. Intenta más tarde.';
+    alertDiv.className = 'alert error';
+    alertDiv.style.display = 'block';
+  }
+}
+
+function cerrarSesion() {
+  localStorage.removeItem(CONFIG.TOKEN_KEY);
+  localStorage.removeItem(CONFIG.USER_KEY);
+  verificarAutenticacion();
+}
+
+// Verificar autenticación al cargar
+document.addEventListener('DOMContentLoaded', () => {
+  verificarAutenticacion();
+  // Permitir login con Enter
+  const passInput = document.getElementById('auth-password');
+  if (passInput) {
+    passInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') intentarLogin();
+    });
+  }
+});
+
 function toggle(header) {
   const body = header.nextElementSibling;
   body.classList.toggle('open');
