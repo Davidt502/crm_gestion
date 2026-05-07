@@ -63,8 +63,11 @@ async function loadCumpleaneros() {
     if (!container) return;
 
     try {
-        const data = await apiJSON('/api/dashboard/cumpleaneros');
-        if (!data) return;
+        const response = await apiJSON('/api/dashboard/cumpleaneros');
+        if (!response) return;
+        
+        // Extraer la lista de cumpleaneros del diccionario
+        const data = response.cumpleaneros || [];
 
         if (!data.length) {
             container.innerHTML = `
@@ -93,4 +96,4 @@ async function loadCumpleaneros() {
         console.error('Error cargando cumpleañeros:', e);
         container.innerHTML = '<div class="empty-state">Error cargando información.</div>';
     }
-}
+}}

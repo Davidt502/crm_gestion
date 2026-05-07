@@ -241,7 +241,8 @@ def api_stats():
 @app.route("/api/dashboard/cumpleaneros", methods=["GET"])
 @token_required
 def api_cumpleaneros():
-    return jsonify(cliente_service.get_cumpleaneros_mes())
+    cumpleaneros = cliente_service.get_cumpleaneros_mes()
+    return jsonify({"cumpleaneros": cumpleaneros})
 
 
 # ── Dependencias ──────────────────────────────────────────────
