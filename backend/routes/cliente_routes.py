@@ -21,6 +21,7 @@ def get_clientes():
     except (ValueError, TypeError):
         page, per_page = 1, 20
 
+    usuario = get_usuario()  # Obtener usuario del token
     result = service.get_all_clientes(
         nombre=request.args.get("nombre") or None,
         documento=request.args.get("documento") or None,
@@ -28,6 +29,7 @@ def get_clientes():
         page=page,
         per_page=per_page,
         search=request.args.get("search") or None,
+        usuario=usuario,  # Pasar usuario para filtrado
     )
     return jsonify(result)
 

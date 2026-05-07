@@ -31,7 +31,7 @@ def _valid_email(email: str) -> bool:
     return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email))
 
 
-def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_DEFAULT_PER_PAGE, search=None):
+def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_DEFAULT_PER_PAGE, search=None, usuario=None):
     try:
         page = max(1, int(page))
         per_page = min(max(1, int(per_page)), _MAX_PER_PAGE)
@@ -40,6 +40,11 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
 
     where_clauses = ["1=1"]
     params = []
+
+    # Filtrar por usuario si se proporciona (usuarios normales ven solo sus clientes)
+    if usuario:
+        where_clauses.append("usuario_creacion = %s")
+        params.append(_sanitize(usuario, 80))
 
     if search:
         where_clauses.append("(nombre_razon_social LIKE %s OR documento_identificacion LIKE %s)")
