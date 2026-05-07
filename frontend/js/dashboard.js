@@ -96,4 +96,4 @@ async function loadCumpleaneros() {
         console.error('Error cargando cumpleañeros:', e);
         container.innerHTML = '<div class="empty-state">Error cargando información.</div>';
     }
-}}
+}

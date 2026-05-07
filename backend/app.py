@@ -44,8 +44,17 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
 
-# CORS — solo orígenes configurados
-CORS(app, origins=os.getenv("CORS_ORIGINS", "*"), supports_credentials=True)
+# CORS — configuración mejorada
+cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "https://crm-frontend-reg9.onrender.com,http://localhost:5500").split(",") if o.strip()]
+CORS(
+    app,
+    origins=cors_origins,
+    supports_credentials=True,
+    allow_headers=['Content-Type', 'Authorization'],
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    expose_headers=['Content-Type'],
+    max_age=3600
+)
 
 # Blueprints
 app.register_blueprint(proveedor_bp)
@@ -56,6 +65,13 @@ app.register_blueprint(api_publica_bp)
 
 
 # ── Cabeceras de seguridad HTTP ───────────────────────────────
+@app.before_request
+def handle_preflight():
+    """Maneja solicitudes OPTIONS preflight para CORS."""
+    if request.method == "OPTIONS":
+        return "", 200
+
+
 @app.before_request
 def enforce_https():
     """Forzar HTTPS en producción."""
