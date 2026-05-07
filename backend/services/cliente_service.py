@@ -119,7 +119,13 @@ def create_cliente(data: dict):
     if id_cliente:
         usuario = _sanitize(data.get("usuario", "sistema"))
         for contacto in data.get("contactos", []):
-            if _sanitize(contacto.get("descripcion", "")):
+            # Verificar si tiene contenido (nombre, teléfono o correo)
+            tiene_contenido = (
+                contacto.get("nombre_contacto") or 
+                contacto.get("telefono") or 
+                contacto.get("correo")
+            )
+            if tiene_contenido:
                 repo.insert_contacto(id_cliente, contacto, usuario)
         return {"id_cliente": id_cliente, "mensaje": mensaje}
 
@@ -141,9 +147,18 @@ def update_cliente(id_cliente, data: dict):
     if id_result:
         usuario = _sanitize(data.get("usuario", "sistema"))
         for contacto in data.get("contactos", []):
+            # Verificar si tiene contenido (nombre, teléfono o correo)
+            tiene_contenido = (
+                contacto.get("nombre_contacto") or 
+                contacto.get("telefono") or 
+                contacto.get("correo")
+            )
             if contacto.get("id_contacto"):
-                repo.update_contacto(contacto, usuario)
-            elif _sanitize(contacto.get("descripcion", "")):
+                # Actualizar contacto existente
+                if tiene_contenido:
+                    repo.update_contacto(contacto, usuario)
+            elif tiene_contenido:
+                # Insertar nuevo contacto
                 repo.insert_contacto(id_cliente, contacto, usuario)
         return {"id_cliente": id_result, "mensaje": mensaje}
 

@@ -212,18 +212,24 @@ function agregarContacto(datos = {}) {
     const card = document.createElement('div');
     card.className = 'contacto-card';
     card.id = `contacto-${idx}`;
+    // Mapear campos del API (nombre_contacto) a campos del form (nombre)
+    const nombre = datos.nombre_contacto || datos.nombre || '';
+    const telefono = datos.telefono || '';
+    const email = datos.correo || datos.email || '';
+    const idContacto = datos.id_contacto || '';
+    
     card.innerHTML = `
         <div class="form-group">
             <label>Nombre</label>
-            <input type="text" id="ct-nombre-${idx}" value="${escapeHtml(datos.nombre || '')}" placeholder="Nombre del contacto">
+            <input type="text" id="ct-nombre-${idx}" value="${escapeHtml(nombre)}" placeholder="Nombre del contacto" data-id="${idContacto}">
         </div>
         <div class="form-group">
             <label>Teléfono</label>
-            <input type="text" id="ct-telefono-${idx}" value="${escapeHtml(datos.telefono || '')}" placeholder="Teléfono">
+            <input type="text" id="ct-telefono-${idx}" value="${escapeHtml(telefono)}" placeholder="Teléfono">
         </div>
         <div class="form-group">
             <label>Email</label>
-            <input type="email" id="ct-email-${idx}" value="${escapeHtml(datos.email || '')}" placeholder="correo@ejemplo.com">
+            <input type="email" id="ct-email-${idx}" value="${escapeHtml(email)}" placeholder="correo@ejemplo.com">
         </div>
         <button type="button" class="btn btn-danger btn-sm btn-icon btn-remove" title="Eliminar" onclick="eliminarContacto(${idx})">✕</button>
     `;
@@ -243,11 +249,26 @@ function eliminarContacto(idx) {
 }
 
 function recopilarContactos() {
-    return contactos.map(idx => ({
-        nombre:   document.getElementById(`ct-nombre-${idx}`)?.value.trim()   || '',
-        telefono: document.getElementById(`ct-telefono-${idx}`)?.value.trim() || '',
-        email:    document.getElementById(`ct-email-${idx}`)?.value.trim()    || '',
-    })).filter(c => c.nombre || c.telefono || c.email);
+    return contactos.map(idx => {
+        const nombreInput = document.getElementById(`ct-nombre-${idx}`);
+        const nombreContacto = nombreInput?.value.trim() || '';
+        const idContacto = nombreInput?.dataset.id;
+        
+        const contacto = {
+            nombre_contacto: nombreContacto,
+            tipo_contacto:   'Teléfono',  // tipo por defecto
+            descripcion:     '',           // campo requerido por el backend
+            telefono:        document.getElementById(`ct-telefono-${idx}`)?.value.trim() || '',
+            correo:          document.getElementById(`ct-email-${idx}`)?.value.trim()    || '',
+        };
+        
+        // Incluir id_contacto si es una edición
+        if (idContacto) {
+            contacto.id_contacto = idContacto;
+        }
+        
+        return contacto;
+    }).filter(c => c.nombre_contacto || c.telefono || c.correo);
 }
 
 // ── Tabs ──────────────────────────────────────────────────────
