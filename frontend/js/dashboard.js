@@ -1,100 +1,143 @@
 /**
- * dashboard.js - Funcionalidad del Dashboard
- * Correcciones:
- *   - Endpoints corregidos: /api/dashboard/* → /api/clientes/*
- *   - XSS: uso de escapeHtml() en birthday-list
- *   - animateCounter: limita paso mínimo para targets=0
- *   - Manejo de errores con showToast
+ * dashboard.js - Dashboard principal
  */
 
-document.addEventListener('DOMContentLoaded', () => {
-    if (!requireAuth()) return;
-    setCurrentDate();
-    loadStats();
-    loadCumpleaneros();
-});
-
-function setCurrentDate() {
-    const el = document.getElementById('current-date');
-    if (!el) return;
-    el.textContent = new Date().toLocaleDateString('es-GT', {
-        weekday: 'long',
-        year:    'numeric',
-        month:   'long',
-        day:     'numeric',
-    });
-}
-
-async function loadStats() {
-    try {
-        const data = await apiJSON('/api/clientes/stats');   // ← corregido
-        if (!data) return;
-        animateCounter('stat-activos',     data.total_activos    || 0);
-        animateCounter('stat-inactivos',   data.total_inactivos  || 0);
-        animateCounter('stat-prospectos',  data.total_prospectos || 0);
-        animateCounter('stat-proveedores', data.proveedores_activos || 0);
-    } catch (e) {
-        console.error('Error cargando estadísticas:', e);
-        showToast('No se pudieron cargar las estadísticas', 'error');
+function mostrarFechaActual() {
+    const fechaEl = document.getElementById('current-date');
+    if (fechaEl) {
+        const opciones = { year: 'numeric', month: 'long', day: 'numeric' };
+        fechaEl.textContent = new Date().toLocaleDateString('es-ES', opciones);
     }
 }
 
-function animateCounter(id, target) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (target === 0) { el.textContent = '0'; return; }
-    let current = 0;
-    const step  = Math.max(1, Math.ceil(target / 30));
-    const timer = setInterval(() => {
-        current = Math.min(current + step, target);
-        el.textContent = current;
-        if (current >= target) clearInterval(timer);
-    }, 30);
+async function cargarEstadisticas() {
+    try {
+        const data = await apiJSON('/api/clientes/stats');
+        if (data) {
+            document.getElementById('stat-activos').textContent = data.clientes_activos || 0;
+            document.getElementById('stat-inactivos').textContent = data.clientes_inactivos || 0;
+            document.getElementById('stat-prospectos').textContent = data.prospectos || 0;
+            document.getElementById('stat-proveedores').textContent = data.proveedores_activos || 0;
+        }
+    } catch (error) {
+        console.error('Error cargando estadísticas:', error);
+        showToast('Error al cargar estadísticas', 'error');
+    }
 }
 
-async function loadCumpleaneros() {
-    const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const mesActual = meses[new Date().getMonth()];
+function getNombreMes() {
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return meses[new Date().getMonth()];
+}
 
-    const badge = document.getElementById('birthday-month-badge');
-    if (badge) badge.textContent = mesActual;
+function getAbreviaturaMes() {
+    const meses = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 
+                   'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+    return meses[new Date().getMonth()];
+}
 
+async function cargarCumpleaños() {
     const container = document.getElementById('birthday-list');
-    if (!container) return;
-
+    const monthBadge = document.getElementById('birthday-month-badge');
+    
+    if (monthBadge) {
+        monthBadge.textContent = getNombreMes();
+    }
+    
     try {
-        const data = await apiJSON('/api/clientes/cumpleaneros');  // ← corregido
-        if (!data) return;
-
-        // El endpoint devuelve un array directo (no un dict con .cumpleaneros)
-        const lista = Array.isArray(data) ? data : (data.cumpleaneros || []);
-
-        if (!lista.length) {
+        const data = await apiJSON('/api/clientes/cumpleaneros');
+        
+        if (!data || data.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">🎂</div>
-                    No hay cumpleaños registrados para este mes.
-                </div>`;
+                    <div>No hay cumpleaños este mes</div>
+                </div>
+            `;
             return;
         }
-
-        container.innerHTML = lista.map(c => `
-            <div class="birthday-item">
-                <div class="birthday-day-box">
-                    <span class="birthday-day-num">${escapeHtml(String(c.dia))}</span>
-                    <span class="birthday-day-mon">${escapeHtml(mesActual.slice(0, 3))}</span>
+        
+        // Separar Clientes y Prospectos
+        const clientes = data.filter(p => p.tipo === 'Cliente');
+        const prospectos = data.filter(p => p.tipo === 'Prospecto');
+        
+        let html = '';
+        
+        // Sección de Clientes
+        if (clientes.length > 0) {
+            html += `
+                <div style="padding: 8px 16px 0 16px;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--gold); font-weight: 700; letter-spacing: 1px;">
+                        👥 CLIENTES (${clientes.length})
+                    </div>
                 </div>
-                <div class="birthday-info">
-                    <div class="birthday-name">${escapeHtml(c.nombre)}</div>
-                    <div class="birthday-meta">🎈 Cumpleaños este mes</div>
+            `;
+            html += clientes.map(persona => `
+                <div class="birthday-item">
+                    <div class="birthday-day-box">
+                        <div class="birthday-day-num">${persona.dia}</div>
+                        <div class="birthday-day-mon">${getAbreviaturaMes()}</div>
+                    </div>
+                    <div class="birthday-info">
+                        <div class="birthday-name">${escapeHtml(persona.nombre)}</div>
+                        <div class="birthday-meta">🎂 Cliente</div>
+                    </div>
+                    <div class="birthday-age-pill">${persona.edad} años</div>
                 </div>
-                <div class="birthday-age-pill">🎁 ${escapeHtml(String(c.edad))} años</div>
+            `).join('');
+        }
+        
+        // Sección de Prospectos
+        if (prospectos.length > 0) {
+            html += `
+                <div style="padding: 16px 16px 0 16px; margin-top: 8px;">
+                    <div style="font-size: 0.7rem; text-transform: uppercase; color: var(--warning); font-weight: 700; letter-spacing: 1px;">
+                        🎯 PROSPECTOS (${prospectos.length})
+                    </div>
+                </div>
+            `;
+            html += prospectos.map(persona => `
+                <div class="birthday-item">
+                    <div class="birthday-day-box">
+                        <div class="birthday-day-num">${persona.dia}</div>
+                        <div class="birthday-day-mon">${getAbreviaturaMes()}</div>
+                    </div>
+                    <div class="birthday-info">
+                        <div class="birthday-name">${escapeHtml(persona.nombre)}</div>
+                        <div class="birthday-meta">🎯 Prospecto</div>
+                    </div>
+                    <div class="birthday-age-pill">${persona.edad} años</div>
+                </div>
+            `).join('');
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error cargando cumpleaños:', error);
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">⚠️</div>
+                <div>Error al cargar cumpleaños</div>
             </div>
-        `).join('');
-    } catch (e) {
-        console.error('Error cargando cumpleañeros:', e);
-        container.innerHTML = '<div class="empty-state">Error cargando información.</div>';
-        showToast('No se pudieron cargar los cumpleañeros', 'error');
+        `;
     }
 }
+
+async function recargarDashboard() {
+    await Promise.all([
+        cargarEstadisticas(),
+        cargarCumpleaños()
+    ]);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (!requireAuth()) return;
+    mostrarFechaActual();
+    recargarDashboard();
+    setInterval(() => {
+        cargarEstadisticas();
+        cargarCumpleaños();
+    }, 300000);
+});

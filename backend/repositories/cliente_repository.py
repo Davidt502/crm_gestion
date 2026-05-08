@@ -205,9 +205,11 @@ def find_cumpleaneros_mes():
         with db_connection() as (conn, cursor):
             cursor.execute(
                 """
-                SELECT nombre_razon_social,
-                       EXTRACT(DAY FROM fecha_nacimiento)::int AS dia,
-                       EXTRACT(YEAR FROM NOW())::int - EXTRACT(YEAR FROM fecha_nacimiento)::int AS edad
+                SELECT 
+                    nombre_razon_social,
+                    EXTRACT(DAY FROM fecha_nacimiento)::int AS dia,
+                    EXTRACT(YEAR FROM AGE(NOW(), fecha_nacimiento))::int AS edad,
+                    tipo
                 FROM clientes
                 WHERE EXTRACT(MONTH FROM fecha_nacimiento) = EXTRACT(MONTH FROM NOW())
                   AND fecha_nacimiento IS NOT NULL
