@@ -229,14 +229,25 @@ def api_login():
     return jsonify({"error": error or "Credenciales incorrectas"}), 401
 
 
+
 # ── Rutas de Cliente ──────────────────────────────────────────
 
 
 @app.route("/api/auth/verify", methods=["GET"])
 @token_required
-def api_verify_token():
-    return jsonify({"valid": True, "user": request.current_user})
-
+def api_verify():
+    """Verifica que el token JWT actual sea válido y retorna el usuario."""
+    user = getattr(request, "current_user", {})
+    return jsonify({
+        "valid": True,
+        "user": {
+            "id_usuario": user.get("id_usuario"),
+            "username":   user.get("username"),
+            "nombre":     user.get("nombre"),
+            "rol":        user.get("rol"),
+            "grupo":      user.get("grupo", ""),
+        }
+    })
 
 # ── Dashboard ─────────────────────────────────────────────────
 @app.route("/api/dashboard/stats", methods=["GET"])
@@ -405,6 +416,102 @@ def api_estado_compra(id):
     r = compras_mod.update_estado_pago(id, body.get("estado_pago", ""), get_usuario())
     return (jsonify(r), 400) if "error" in r else jsonify(r)
 
+# Agrega esto DESPUÉS de @app.route("/api/auth/login") y ANTES de @app.route("/api/auth/verify")
+
+@app.route("/api/auth/register", methods=["POST"])
+def api_register():
+    """Registrar un nuevo usuario en el CRM"""
+    ip = request.remote_addr or "unknown"
+    
+    # Rate limiting también para registro (evita spam)
+    if _is_rate_limited(ip, "login"):
+        logger.warning("Rate limit excedido para registro IP: %s", ip)
+        return jsonify({"error": "Demasiados intentos. Espera un momento."}), 429
+    
+    if not request.is_json:
+        return jsonify({"error": "Content-Type debe ser application/json"}), 400
+    
+    data = request.get_json(silent=True) or {}
+    nombre = str(data.get("nombre", "")).strip()
+    username = str(data.get("username", "")).strip()
+    email = str(data.get("email", "")).strip()
+    password = str(data.get("password", ""))
+    
+    # Validaciones
+    if not nombre or not username or not email or not password:
+        return jsonify({"error": "Todos los campos son requeridos"}), 400
+    
+    if len(password) < 6:
+        return jsonify({"error": "La contraseña debe tener al menos 6 caracteres"}), 400
+    
+    # Importar bcrypt (asegúrate de tenerlo en requirements.txt)
+    try:
+        import bcrypt
+    except ImportError:
+        logger.error("bcrypt no está instalado. Ejecuta: pip install bcrypt")
+        return jsonify({"error": "Error interno del servidor"}), 500
+    
+    try:
+        from database import db_connection
+        
+        with db_connection() as (conn, cursor):
+            # Verificar si username ya existe
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE username = %s", [username])
+            if cursor.fetchone():
+                return jsonify({"error": "El nombre de usuario ya existe"}), 400
+            
+            # Verificar si email ya existe
+            cursor.execute("SELECT id_usuario FROM usuarios WHERE email = %s", [email])
+            if cursor.fetchone():
+                return jsonify({"error": "El correo electrónico ya está registrado"}), 400
+            
+            # Hashear contraseña
+            hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+            
+            # Insertar nuevo usuario (por defecto rol='usuario', no admin)
+            cursor.execute("""
+                INSERT INTO usuarios (nombre, username, email, password_hash, rol, activo, fecha_creacion)
+                VALUES (%s, %s, %s, %s, %s, true, NOW())
+                RETURNING id_usuario, nombre, username, email, rol
+            """, [nombre, username, email, hashed_password.decode('utf-8'), 'usuario'])
+            
+            user_data = cursor.fetchone()
+            conn.commit()
+            
+            # Generar token automáticamente
+            token = generate_token({
+                "id_usuario": user_data[0],
+                "username": user_data[2],
+                "nombre": user_data[1],
+                "rol": user_data[4],
+                "grupo": ""
+            })
+            
+            logger.info("Registro exitoso: %s desde %s", username, ip)
+            registrar_auditoria(
+                accion="registro",
+                recurso="auth",
+                exitoso=True,
+                codigo_respuesta=201,
+                detalle={"username": username, "email": email},
+            )
+            
+            return jsonify({
+                "success": True,
+                "token": token,
+                "user": {
+                    "id_usuario": user_data[0],
+                    "nombre": user_data[1],
+                    "username": user_data[2],
+                    "email": user_data[3],
+                    "rol": user_data[4]
+                },
+                "mensaje": "Usuario registrado exitosamente"
+            }), 201
+            
+    except Exception as e:
+        logger.error(f"Error en registro: {e}", exc_info=True)
+        return jsonify({"error": "Error al registrar usuario"}), 500
 
 # ── Main ──────────────────────────────────────────────────────
 if __name__ == "__main__":

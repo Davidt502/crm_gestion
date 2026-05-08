@@ -1,9 +1,10 @@
 /**
  * dashboard.js - Funcionalidad del Dashboard
  * Correcciones:
- *   - XSS: uso de escapeHtml() en birthday-list (datos vienen del servidor)
+ *   - Endpoints corregidos: /api/dashboard/* → /api/clientes/*
+ *   - XSS: uso de escapeHtml() en birthday-list
  *   - animateCounter: limita paso mínimo para targets=0
- *   - Manejo de errores más descriptivo con showToast
+ *   - Manejo de errores con showToast
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -26,12 +27,12 @@ function setCurrentDate() {
 
 async function loadStats() {
     try {
-        const data = await apiJSON('/api/dashboard/stats');
+        const data = await apiJSON('/api/clientes/stats');   // ← corregido
         if (!data) return;
-        animateCounter('stat-activos',     data.clientes_activos   || 0);
-        animateCounter('stat-inactivos',   data.clientes_inactivos || 0);
-        animateCounter('stat-prospectos',  data.prospectos         || 0);
-        animateCounter('stat-proveedores', data.proveedores_activos|| 0);
+        animateCounter('stat-activos',     data.total_activos    || 0);
+        animateCounter('stat-inactivos',   data.total_inactivos  || 0);
+        animateCounter('stat-prospectos',  data.total_prospectos || 0);
+        animateCounter('stat-proveedores', data.proveedores_activos || 0);
     } catch (e) {
         console.error('Error cargando estadísticas:', e);
         showToast('No se pudieron cargar las estadísticas', 'error');
@@ -63,13 +64,13 @@ async function loadCumpleaneros() {
     if (!container) return;
 
     try {
-        const response = await apiJSON('/api/dashboard/cumpleaneros');
-        if (!response) return;
-        
-        // Extraer la lista de cumpleaneros del diccionario
-        const data = response.cumpleaneros || [];
+        const data = await apiJSON('/api/clientes/cumpleaneros');  // ← corregido
+        if (!data) return;
 
-        if (!data.length) {
+        // El endpoint devuelve un array directo (no un dict con .cumpleaneros)
+        const lista = Array.isArray(data) ? data : (data.cumpleaneros || []);
+
+        if (!lista.length) {
             container.innerHTML = `
                 <div class="empty-state">
                     <div class="empty-icon">🎂</div>
@@ -78,8 +79,7 @@ async function loadCumpleaneros() {
             return;
         }
 
-        // ✅ escapeHtml() en todos los datos que vienen del servidor
-        container.innerHTML = data.map(c => `
+        container.innerHTML = lista.map(c => `
             <div class="birthday-item">
                 <div class="birthday-day-box">
                     <span class="birthday-day-num">${escapeHtml(String(c.dia))}</span>
@@ -95,5 +95,6 @@ async function loadCumpleaneros() {
     } catch (e) {
         console.error('Error cargando cumpleañeros:', e);
         container.innerHTML = '<div class="empty-state">Error cargando información.</div>';
+        showToast('No se pudieron cargar los cumpleañeros', 'error');
     }
 }

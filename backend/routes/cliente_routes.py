@@ -4,6 +4,7 @@ Correcciones:
   - Validación Content-Type en métodos que reciben body
   - get_json(silent=True) para no lanzar excepciones ante JSON malformado
   - Manejo de caso data=None cuando el body está vacío
+  - Agregado endpoint /cumpleaneros (faltaba)
 """
 from flask import Blueprint, request, jsonify
 from services import cliente_service as service
@@ -21,7 +22,7 @@ def get_clientes():
     except (ValueError, TypeError):
         page, per_page = 1, 20
 
-    usuario = get_usuario()  # Obtener usuario del token
+    usuario = get_usuario()
     result = service.get_all_clientes(
         nombre=request.args.get("nombre") or None,
         documento=request.args.get("documento") or None,
@@ -29,7 +30,7 @@ def get_clientes():
         page=page,
         per_page=per_page,
         search=request.args.get("search") or None,
-        usuario=usuario,  # Pasar usuario para filtrado
+        usuario=usuario,
     )
     return jsonify(result)
 
@@ -77,6 +78,14 @@ def update_cliente(id):
 @token_required
 def inactivar_cliente(id):
     return jsonify(service.inactivar_cliente(id, get_usuario()))
+
+
+# ── Rutas estáticas SIEMPRE antes de /<int:id> ──────────────────────────────
+
+@cliente_bp.route("/cumpleaneros", methods=["GET"])
+@token_required
+def get_cumpleaneros():
+    return jsonify(service.get_cumpleaneros_mes())
 
 
 @cliente_bp.route("/tipos-cliente", methods=["GET"])
