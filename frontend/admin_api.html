@@ -16,120 +16,65 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;display:flex;min-height:100vh;}
 
-/* Sidebar */
 .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);
-  display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;position:sticky;top:0;height:100vh;}
+  display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;height:100vh;position:sticky;top:0;}
 .sidebar-logo{padding:0 20px 24px;font-size:17px;font-weight:800;border-bottom:1px solid var(--border);}
 .sidebar-logo span{color:var(--accent);}
 .sidebar nav{padding:16px 12px;flex:1;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
-  cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);transition:all 0.15s;
-  margin-bottom:4px;}
+  cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);margin-bottom:4px;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
 .nav-item.active{background:rgba(59,130,246,0.15);color:var(--accent);}
-.nav-item .badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;
-  padding:2px 6px;border-radius:10px;font-family:var(--mono);}
+.nav-item .badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;}
 
-/* Main */
 .main{flex:1;overflow-y:auto;padding:32px;}
 .page{display:none;}
 .page.active{display:block;}
 
-/* Header */
 .page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;}
 .page-title{font-size:24px;font-weight:800;}
-.page-sub{color:var(--muted);font-size:13px;margin-top:2px;font-weight:400;}
-
-/* Stats cards */
 .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px;}
 .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
-.stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;font-family:var(--mono);}
+.stat-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;margin-bottom:8px;}
 .stat-card .value{font-size:28px;font-weight:800;}
 .stat-card .value.accent{color:var(--accent);}
 .stat-card .value.green{color:var(--green);}
 .stat-card .value.red{color:var(--red);}
 .stat-card .value.yellow{color:var(--yellow);}
 
-/* Table */
-.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:auto;}
 table{width:100%;border-collapse:collapse;font-size:14px;}
-th{background:var(--surface2);padding:12px 16px;text-align:left;font-size:11px;
-  color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;}
-td{padding:12px 16px;border-top:1px solid var(--border);vertical-align:middle;}
-tr:hover td{background:rgba(255,255,255,0.02);}
-
-/* Badges */
-.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
-  padding:3px 8px;border-radius:20px;font-family:var(--mono);}
+th{background:var(--surface2);padding:12px 16px;text-align:left;font-size:11px;color:var(--muted);}
+td{padding:12px 16px;border-top:1px solid var(--border);}
+.badge{display:inline-flex;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;}
 .badge.pendiente{background:rgba(245,158,11,0.15);color:var(--yellow);}
 .badge.aprobado{background:rgba(16,185,129,0.15);color:var(--green);}
 .badge.rechazado{background:rgba(239,68,68,0.15);color:var(--red);}
-.badge.activo{background:rgba(16,185,129,0.15);color:var(--green);}
-.badge.inactivo{background:rgba(100,116,139,0.2);color:var(--muted);}
 
-/* Buttons */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:7px;
-  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;border:none;
-  transition:all 0.15s;}
+  font-size:12px;font-weight:700;cursor:pointer;border:none;}
 .btn-primary{background:var(--accent);color:#fff;}
-.btn-primary:hover{background:#2563eb;}
 .btn-green{background:rgba(16,185,129,0.15);color:var(--green);border:1px solid rgba(16,185,129,0.3);}
-.btn-green:hover{background:rgba(16,185,129,0.25);}
 .btn-red{background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,0.3);}
-.btn-red:hover{background:rgba(239,68,68,0.25);}
 .btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
-.btn-ghost:hover{border-color:var(--accent);}
 
-/* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:50;
-  display:none;align-items:center;justify-content:center;padding:24px;}
+  display:none;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;
-  width:100%;max-width:480px;max-height:80vh;overflow-y:auto;}
-.modal-header{display:flex;align-items:center;justify-content:space-between;
-  padding:20px 24px;border-bottom:1px solid var(--border);}
-.modal-title{font-size:16px;font-weight:800;}
-.modal-close{cursor:pointer;color:var(--muted);font-size:20px;background:none;border:none;
-  color:var(--muted);}
+  width:100%;max-width:500px;max-height:80vh;overflow-y:auto;}
+.modal-header{display:flex;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);}
 .modal-body{padding:24px;}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:20px 24px;border-top:1px solid var(--border);}
 .field{margin-bottom:16px;}
-.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);
-  text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:6px;}
 .field input,.field textarea,.field select{width:100%;background:var(--surface2);
-  border:1px solid var(--border);border-radius:7px;padding:10px 12px;
-  color:var(--text);font-family:'Syne',sans-serif;font-size:13px;outline:none;}
-.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--accent);}
-.toggle-row{display:flex;align-items:center;justify-content:space-between;
-  padding:12px 0;border-bottom:1px solid var(--border);}
-.toggle-label{font-size:14px;font-weight:600;}
-.toggle-sub{font-size:12px;color:var(--muted);font-weight:400;}
-.toggle{position:relative;width:44px;height:24px;cursor:pointer;}
-.toggle input{opacity:0;width:0;height:0;}
-.slider{position:absolute;inset:0;background:var(--surface2);border-radius:24px;
-  transition:0.2s;border:1px solid var(--border);}
-.slider:before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;
-  background:var(--muted);border-radius:50%;transition:0.2s;}
-.toggle input:checked+.slider{background:rgba(16,185,129,0.3);border-color:var(--green);}
-.toggle input:checked+.slider:before{background:var(--green);transform:translateX(20px);}
-.modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:20px 24px;
-  border-top:1px solid var(--border);}
-
-/* Filter bar */
+  border:1px solid var(--border);border-radius:7px;padding:10px;color:var(--text);}
 .filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
-.filter-btn{padding:7px 14px;border-radius:20px;font-size:12px;font-weight:600;
-  cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);
-  transition:all 0.15s;}
+.filter-btn{padding:7px 14px;border-radius:20px;font-size:12px;cursor:pointer;
+  border:1px solid var(--border);background:var(--surface);color:var(--muted);}
 .filter-btn.active{background:rgba(59,130,246,0.15);color:var(--accent);border-color:var(--accent);}
 
-/* Log table mono */
-.mono{font-family:var(--mono);font-size:12px;}
-.method-tag{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500;}
-.method-tag.get{background:rgba(16,185,129,0.15);color:var(--green);}
-.method-tag.post{background:rgba(59,130,246,0.15);color:var(--accent);}
-.method-tag.put,.method-tag.patch{background:rgba(245,158,11,0.15);color:var(--yellow);}
-.method-tag.delete{background:rgba(239,68,68,0.15);color:var(--red);}
-
-/* Toast */
 #toast{position:fixed;bottom:24px;right:24px;z-index:200;padding:12px 18px;
   border-radius:8px;font-size:13px;font-weight:600;transform:translateY(60px);
   opacity:0;transition:all 0.3s;}
@@ -137,244 +82,148 @@ tr:hover td{background:rgba(255,255,255,0.02);}
 #toast.success{background:#064e3b;color:#6ee7b7;border:1px solid #059669;}
 #toast.error{background:#450a0a;color:#fca5a5;border:1px solid var(--red);}
 
-.empty{text-align:center;padding:48px;color:var(--muted);font-size:14px;}
-.ip-input{display:flex;gap:8px;margin-bottom:16px;}
-.ip-input input{flex:1;background:var(--surface2);border:1px solid var(--border);
-  border-radius:7px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:13px;outline:none;}
-.ip-input input:focus{border-color:var(--accent);}
+.auth-screen{position:fixed;inset:0;background:var(--bg);z-index:1000;
+  display:flex;align-items:center;justify-content:center;}
+.empty{text-align:center;padding:48px;color:var(--muted);}
 </style>
 </head>
 <body>
 
-<!-- Auth Screen si no es admin -->
-<div id="auth-admin-screen" style="position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;align-items:center;justify-content:center;padding:24px;">
-  <div style="max-width:500px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;">
-    <div style="font-size:48px;margin-bottom:20px;">🔐</div>
-    <h1 style="font-size:28px;font-weight:800;margin-bottom:10px;">Panel de Administrador</h1>
-    <p style="color:var(--muted);margin-bottom:32px;font-size:14px;">Solo administradores pueden acceder aquí</p>
-    
-    <div id="auth-admin-alert" style="display:none;padding:12px;border-radius:8px;margin-bottom:20px;border:1px solid var(--red);background:rgba(239,68,68,0.1);color:#fca5a5;font-size:13px;"></div>
-    
-    <div style="margin-bottom:20px;">
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Usuario</label>
-      <input type="text" id="admin-username" placeholder="Tu usuario" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;outline:none;">
+<!-- Pantalla de Login de Administrador -->
+<div id="auth-admin-screen" class="auth-screen">
+  <div style="max-width:500px;width:100%;padding:24px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;text-align:center;">
+      <div style="font-size:48px;margin-bottom:20px;">👑</div>
+      <h1 style="font-size:28px;font-weight:800;margin-bottom:10px;">Panel de Administrador</h1>
+      <p style="color:var(--muted);margin-bottom:32px;">Solo administradores pueden acceder</p>
+      
+      <div id="auth-admin-alert" class="empty" style="display:none;padding:12px;border:1px solid var(--red);color:#fca5a5;margin-bottom:20px;"></div>
+      
+      <div class="field">
+        <label>Usuario</label>
+        <input type="text" id="admin-username" placeholder="Tu usuario">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="admin-password" placeholder="Tu contraseña">
+      </div>
+      
+      <button class="btn" onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;">🔓 Acceder como Admin</button>
     </div>
-    
-    <div style="margin-bottom:24px;">
-      <label style="display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;text-transform:uppercase;">Contraseña</label>
-      <input type="password" id="admin-password" placeholder="Tu contraseña" style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;outline:none;">
-    </div>
-    
-    <button onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:8px;padding:14px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;cursor:pointer;">🔓 Iniciar Sesión</button>
   </div>
 </div>
 
-<!-- Sidebar -->
-<div class="sidebar">
+<!-- Sidebar (oculto hasta login admin) -->
+<div class="sidebar" id="sidebar" style="display:none;">
   <div class="sidebar-logo">CRM <span>Admin</span></div>
   <nav>
     <div class="nav-item active" onclick="goTo('dashboard')">📊 Dashboard</div>
-    <div class="nav-item" id="nav-solicitudes" onclick="goTo('solicitudes')">
-      📋 Solicitudes <span class="badge" id="badge-pendientes" style="display:none">0</span>
-    </div>
+    <div class="nav-item" onclick="goTo('solicitudes')">📋 Solicitudes <span class="badge" id="badge-pendientes">0</span></div>
     <div class="nav-item" onclick="goTo('tokens')">🔑 Tokens</div>
-    <div class="nav-item" onclick="goTo('logs')">📜 Logs de uso</div>
+    <div class="nav-item" onclick="goTo('logs')">📜 Logs</div>
     <div class="nav-item" onclick="goTo('ips')">🚫 IPs bloqueadas</div>
     <div class="nav-item" onclick="goTo('alertas')">⚠️ Alertas</div>
-    <div class="nav-item" onclick="window.location.href='dashboard.html'" style="margin-top:auto;">← CRM</div>
+    <div class="nav-item" onclick="cerrarSesionAdmin()" style="margin-top:auto;color:var(--red);">🚪 Cerrar sesión</div>
   </nav>
 </div>
 
-<!-- Main -->
-<div class="main">
-
-  <!-- Dashboard -->
+<!-- Main Content -->
+<div class="main" id="main" style="display:none;">
   <div class="page active" id="page-dashboard">
-    <div class="page-header">
-      <div><div class="page-title">Panel de Control</div>
-        <div class="page-sub">Resumen del sistema de APIs</div></div>
-      <button class="btn btn-ghost" onclick="loadAll()">↻ Actualizar</button>
-    </div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="label">Total solicitudes</div><div class="value accent" id="s-total">—</div></div>
-      <div class="stat-card"><div class="label">Pendientes</div><div class="value yellow" id="s-pendientes">—</div></div>
-      <div class="stat-card"><div class="label">Tokens activos</div><div class="value green" id="s-tokens">—</div></div>
-      <div class="stat-card"><div class="label">Llamadas 24h</div><div class="value accent" id="s-calls">—</div></div>
-      <div class="stat-card"><div class="label">IPs bloqueadas</div><div class="value red" id="s-ips">—</div></div>
-      <div class="stat-card"><div class="label">Alertas activas</div><div class="value yellow" id="s-alertas">—</div></div>
-    </div>
-    <div class="table-wrap">
-      <table><thead><tr><th>Endpoint</th><th>Llamadas (7 días)</th></tr></thead>
-        <tbody id="top-endpoints"><tr><td colspan="2" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
+    <div class="page-header"><div><div class="page-title">Panel de Control</div></div>
+      <button class="btn btn-ghost" onclick="loadStats()">↻ Actualizar</button></div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Llamadas (7 días)</th></tr></thead>
+        <tbody id="top-endpoints"></tbody>
+      </table></div>
   </div>
 
-  <!-- Solicitudes -->
   <div class="page" id="page-solicitudes">
-    <div class="page-header">
-      <div><div class="page-title">Solicitudes de acceso</div>
-        <div class="page-sub">Gestiona quién puede usar la API</div></div>
-    </div>
-    <div class="filter-bar">
-      <div class="filter-btn active" onclick="filtrarSol(this,'')">Todas</div>
+    <div class="page-header"><div><div class="page-title">Solicitudes de acceso</div></div></div>
+    <div class="filter-bar"><div class="filter-btn active" onclick="filtrarSol(this,'')">Todas</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Pendiente')">Pendientes</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Aprobado')">Aprobadas</div>
-      <div class="filter-btn" onclick="filtrarSol(this,'Rechazado')">Rechazadas</div>
-    </div>
-    <div class="table-wrap">
-      <table><thead><tr><th>#</th><th>Nombre</th><th>Correo</th><th>Empresa</th><th>IP</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="tabla-solicitudes"><tr><td colspan="8" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
+      <div class="filter-btn" onclick="filtrarSol(this,'Rechazado')">Rechazadas</div></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th><th>Nombre</th><th>Correo</th><th>Empresa</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="tabla-solicitudes"></tbody>
+      </table></div>
   </div>
 
-  <!-- Tokens -->
   <div class="page" id="page-tokens">
-    <div class="page-header">
-      <div><div class="page-title">Tokens activos</div>
-        <div class="page-sub">Controla el acceso de cada usuario externo</div></div>
-    </div>
-    <div class="table-wrap">
-      <table><thead><tr><th>Nombre</th><th>Usuario</th><th>Permisos</th><th>Usos hoy</th><th>Total usos</th><th>Estado</th><th>Acciones</th></tr></thead>
-        <tbody id="tabla-tokens"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
+    <div class="page-header"><div><div class="page-title">Tokens activos</div></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Permisos</th><th>Usos hoy</th><th>Estado</th><th>Acciones</th></tr></thead>
+        <tbody id="tabla-tokens"></tbody>
+      </table></div>
   </div>
 
-  <!-- Logs -->
   <div class="page" id="page-logs">
-    <div class="page-header">
-      <div><div class="page-title">Logs de uso</div>
-        <div class="page-sub">Registro completo de cada llamada a la API</div></div>
-    </div>
-    <div class="table-wrap">
-      <table><thead><tr><th>Fecha</th><th>Token</th><th>Usuario</th><th>Método</th><th>Endpoint</th><th>IP</th><th>Código</th><th>ms</th></tr></thead>
-        <tbody id="tabla-logs"><tr><td colspan="8" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;">
-      <button class="btn btn-ghost" id="btn-prev" onclick="cambiarPagLogs(-1)">← Anterior</button>
-      <span style="padding:8px 16px;font-size:13px;color:var(--muted)" id="lbl-pag">Pág 1</span>
-      <button class="btn btn-ghost" id="btn-next" onclick="cambiarPagLogs(1)">Siguiente →</button>
-    </div>
+    <div class="page-header"><div><div class="page-title">Logs de uso</div></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Método</th><th>Endpoint</th><th>IP</th><th>Código</th></tr></thead>
+        <tbody id="tabla-logs"></tbody>
+      </table></div>
   </div>
 
-  <!-- IPs -->
   <div class="page" id="page-ips">
-    <div class="page-header">
-      <div><div class="page-title">IPs bloqueadas</div>
-        <div class="page-sub">Gestiona el acceso por dirección IP</div></div>
-    </div>
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px;">
-      <div style="font-size:14px;font-weight:700;margin-bottom:12px;">Bloquear nueva IP</div>
-      <div class="ip-input">
-        <input type="text" id="nueva-ip" placeholder="192.168.1.1">
-        <input type="text" id="motivo-ip" placeholder="Motivo del bloqueo" style="flex:2">
-        <button class="btn btn-red" onclick="bloquearIP()">🚫 Bloquear</button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table><thead><tr><th>IP</th><th>Motivo</th><th>Bloqueado por</th><th>Fecha</th><th>Estado</th><th>Acción</th></tr></thead>
-        <tbody id="tabla-ips"><tr><td colspan="6" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
+    <div class="page-header"><div><div class="page-title">IPs bloqueadas</div></div></div>
+    <div class="table-wrap"><tr><thead><th>IP</th><th>Motivo</th><th>Fecha</th><th>Acción</th></thead>
+        <tbody id="tabla-ips"></tbody>
+      </table></div>
   </div>
 
-  <!-- Alertas -->
   <div class="page" id="page-alertas">
-    <div class="page-header">
-      <div><div class="page-title">Alertas del sistema</div>
-        <div class="page-sub">Actividad sospechosa y límites excedidos</div></div>
-    </div>
-    <div class="table-wrap">
-      <table><thead><tr><th>Tipo</th><th>Descripción</th><th>IP</th><th>Correo</th><th>Fecha</th></tr></thead>
-        <tbody id="tabla-alertas"><tr><td colspan="5" class="empty">Cargando...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-
-</div><!-- /main -->
-
-<!-- Modal Aprobar -->
-<div class="modal-overlay" id="modal-aprobar">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">Aprobar solicitud</span>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="info-solicitante" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;line-height:1.8;color:var(--muted);"></div>
-      <div class="toggle-row">
-        <div><div class="toggle-label">Puede leer datos</div><div class="toggle-sub">GET en todos los endpoints públicos</div></div>
-        <label class="toggle"><input type="checkbox" id="perm-leer" checked><span class="slider"></span></label>
-      </div>
-      <div class="toggle-row" style="border:none">
-        <div><div class="toggle-label">Puede escribir datos</div><div class="toggle-sub">POST, PUT, PATCH, DELETE</div></div>
-        <label class="toggle"><input type="checkbox" id="perm-escribir"><span class="slider"></span></label>
-      </div>
-      <div class="field" style="margin-top:16px"><label>Límite diario de requests</label>
-        <input type="number" id="max-req" value="1000" min="1" max="100000"></div>
-      <div class="field"><label>Expira en (opcional)</label>
-        <input type="datetime-local" id="expira-en"></div>
-      <div class="field"><label>Notas internas</label>
-        <textarea id="notas-aprobar" placeholder="Observaciones (solo visible para admins)" rows="2"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-green" onclick="confirmarAprobacion()">✅ Aprobar y generar token</button>
-    </div>
-  </div>
-</div>
-
-<!-- Modal Rechazar -->
-<div class="modal-overlay" id="modal-rechazar">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">Rechazar solicitud</span>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <div id="info-rechazar" style="background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:16px;font-size:13px;color:var(--muted);"></div>
-      <div class="field"><label>Motivo del rechazo (se envía al solicitante)</label>
-        <textarea id="notas-rechazar" placeholder="Explica por qué se rechaza la solicitud..." rows="3"></textarea></div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-red" onclick="confirmarRechazo()">❌ Rechazar</button>
-    </div>
+    <div class="page-header"><div><div class="page-title">Alertas</div></div></div>
+    <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descripción</th><th>Fecha</th></tr></thead>
+        <tbody id="tabla-alertas"></tbody>
+      </table></div>
   </div>
 </div>
 
 <div id="toast"></div>
+
 <script src="js/config.js"></script>
 <script>
-// ─── Autenticación Admin ───────────────────────────────────
+let solFiltro = '';
+let solActual = null;
 
-function verificarAdmin() {
-  const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = (type === 'success' ? '✅ ' : '❌ ') + msg;
+  t.className = 'show ' + type;
+  setTimeout(() => t.className = '', 3000);
+}
+
+function getToken() { return localStorage.getItem(CONFIG.TOKEN_KEY); }
+function getUser() {
+  try { return JSON.parse(localStorage.getItem(CONFIG.USER_KEY)); }
+  catch { return null; }
+}
+
+function headers() {
+  return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() };
+}
+
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(CONFIG.API_BASE_URL + url, { ...opts, headers: { ...headers(), ...(opts.headers || {}) } });
+  return [res, await res.json()];
+}
+
+// Verificar autenticación de administrador
+async function verificarAdmin() {
+  const token = getToken();
   const user = getUser();
-  const authScreen = document.getElementById('auth-admin-screen');
-  const sidebar = document.querySelector('.sidebar');
   
   if (!token || !user || user.rol !== 'admin') {
-    // No hay token o no es admin - mostrar pantalla de login
-    if (authScreen) authScreen.style.display = 'flex';
-    if (sidebar) sidebar.style.display = 'none';
+    document.getElementById('auth-admin-screen').style.display = 'flex';
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('main').style.display = 'none';
     return false;
   }
   
-  // Es admin - mostrar panel
-  if (authScreen) authScreen.style.display = 'none';
-  if (sidebar) sidebar.style.display = 'flex';
+  document.getElementById('auth-admin-screen').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('main').style.display = 'block';
+  loadStats();
   return true;
-}
-
-function getUser() {
-  try {
-    const raw = localStorage.getItem(CONFIG.USER_KEY);
-    return raw ? JSON.parse(raw) : null;
-  } catch { return null; }
 }
 
 async function loginAdmin() {
@@ -400,9 +249,8 @@ async function loginAdmin() {
     if (res.ok && data.token) {
       const user = data.user || {};
       
-      // Verificar que sea admin
       if (user.rol !== 'admin') {
-        alertDiv.textContent = 'Solo administradores pueden acceder a este panel.';
+        alertDiv.textContent = 'Acceso denegado. Solo administradores pueden usar este panel.';
         alertDiv.style.display = 'block';
         return;
       }
@@ -410,8 +258,10 @@ async function loginAdmin() {
       localStorage.setItem(CONFIG.TOKEN_KEY, data.token);
       localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
       alertDiv.style.display = 'none';
+      document.getElementById('admin-username').value = '';
+      document.getElementById('admin-password').value = '';
       verificarAdmin();
-      loadStats();
+      toast('Bienvenido al panel de administración', 'success');
     } else {
       alertDiv.textContent = data.error || 'Usuario o contraseña incorrectos.';
       alertDiv.style.display = 'block';
@@ -422,281 +272,176 @@ async function loginAdmin() {
   }
 }
 
-// Verificar autenticación al cargar
-document.addEventListener('DOMContentLoaded', () => {
-  if (verificarAdmin()) {
-    loadStats();
-  }
-  // Permitir login con Enter
-  const passInput = document.getElementById('admin-password');
-  if (passInput) {
-    passInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') loginAdmin();
-    });
-  }
-});
-
-const API = CONFIG.API_BASE_URL;
-const token = () => localStorage.getItem(CONFIG.TOKEN_KEY);
-const headers = () => ({'Content-Type':'application/json','Authorization':'Bearer '+token()});
-
-let solActual = null, solFiltro = '', logPag = 1, logTotal = 1;
+function cerrarSesionAdmin() {
+  localStorage.removeItem(CONFIG.TOKEN_KEY);
+  localStorage.removeItem(CONFIG.USER_KEY);
+  verificarAdmin();
+  toast('Sesión cerrada', 'success');
+}
 
 function goTo(page) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'solicitudes') loadSolicitudes();
+  if (page === 'tokens') loadTokens();
+  if (page === 'logs') loadLogs();
+  if (page === 'ips') loadIPs();
+  if (page === 'alertas') loadAlertas();
   event.currentTarget.classList.add('active');
-  if(page==='solicitudes') loadSolicitudes();
-  if(page==='tokens') loadTokens();
-  if(page==='logs') loadLogs();
-  if(page==='ips') loadIPs();
-  if(page==='alertas') loadAlertas();
 }
 
-function toast(msg, type='success') {
-  const t = document.getElementById('toast');
-  t.textContent = (type==='success'?'✅ ':'❌ ')+msg;
-  t.className = 'show '+type;
-  setTimeout(()=>t.className='', 3500);
-}
-
-async function apiFetch(url, opts={}) {
-  const res = await fetch(API+url, {...opts, headers: {...headers(), ...(opts.headers||{})}});
-  return [res, await res.json()];
-}
-
-// ── Dashboard ──────────────────────────────────────────────
 async function loadStats() {
-  try {
-    const [,d] = await apiFetch('/api/admin/stats');
-    document.getElementById('s-total').textContent     = d.total_solicitudes;
-    document.getElementById('s-pendientes').textContent = d.pendientes;
-    document.getElementById('s-tokens').textContent    = d.tokens_activos;
-    document.getElementById('s-calls').textContent     = d.llamadas_24h;
-    document.getElementById('s-ips').textContent       = d.ips_bloqueadas;
-    document.getElementById('s-alertas').textContent   = d.alertas_activas;
-    if(d.pendientes > 0) {
-      const b = document.getElementById('badge-pendientes');
-      b.textContent = d.pendientes; b.style.display = '';
-    }
-    const top = document.getElementById('top-endpoints');
-    top.innerHTML = d.top_endpoints.length
-      ? d.top_endpoints.map(e => `<tr><td class="mono">${e.endpoint}</td><td class="mono">${e.total}</td></tr>`).join('')
-      : '<tr><td colspan="2" class="empty">Sin datos aún</td></tr>';
-  } catch(e) { console.error(e); }
+  const [, d] = await apiFetch('/api/admin/stats');
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Solicitudes</div><div class="value accent">${d.total_solicitudes || 0}</div></div>
+    <div class="stat-card"><div class="label">Pendientes</div><div class="value yellow">${d.pendientes || 0}</div></div>
+    <div class="stat-card"><div class="label">Tokens activos</div><div class="value green">${d.tokens_activos || 0}</div></div>
+    <div class="stat-card"><div class="label">Llamadas 24h</div><div class="value accent">${d.llamadas_24h || 0}</div></div>
+    <div class="stat-card"><div class="label">IPs bloqueadas</div><div class="value red">${d.ips_bloqueadas || 0}</div></div>`;
+  
+  document.getElementById('badge-pendientes').textContent = d.pendientes || 0;
+  
+  const top = document.getElementById('top-endpoints');
+  if (d.top_endpoints && d.top_endpoints.length) {
+    top.innerHTML = d.top_endpoints.map(e => `<tr><td class="mono">${e.endpoint}</td><td>${e.total}</td></tr>`).join('');
+  } else {
+    top.innerHTML = '<tr><td colspan="2" class="empty">Sin datos</td></tr>';
+  }
 }
 
-// ── Solicitudes ────────────────────────────────────────────
-let allSolicitudes = [];
 async function loadSolicitudes() {
   const url = solFiltro ? `/api/admin/solicitudes?estado=${solFiltro}` : '/api/admin/solicitudes';
-  const [,d] = await apiFetch(url);
-  allSolicitudes = d.solicitudes || [];
-  renderSolicitudes(allSolicitudes);
-}
-
-function renderSolicitudes(list) {
+  const [, d] = await apiFetch(url);
+  const list = d.solicitudes || [];
   const tb = document.getElementById('tabla-solicitudes');
-  if(!list.length){ tb.innerHTML='<tr><td colspan="8" class="empty">Sin solicitudes</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin solicitudes</td></tr>'; return; }
   tb.innerHTML = list.map(s => `
     <tr>
-      <td class="mono">${s.id_solicitud}</td>
-      <td><div style="font-weight:600">${s.nombre}</div><div style="font-size:11px;color:var(--muted)">${s.cargo||''}</div></td>
-      <td class="mono" style="font-size:12px">${s.correo}</td>
-      <td style="font-size:12px">${s.empresa||'—'}</td>
-      <td class="mono" style="font-size:11px">${s.ip_solicitud||'—'}</td>
-      <td style="font-size:12px">${fmtDate(s.fecha_solicitud)}</td>
+      <td>${s.id_solicitud}</td>
+      <td><strong>${s.nombre}</strong><br><span style="font-size:11px;color:var(--muted)">${s.cargo || ''}</span></td>
+      <td>${s.correo}</td>
+      <td>${s.empresa || '—'}</td>
+      <td style="font-size:12px">${new Date(s.fecha_solicitud).toLocaleDateString()}</td>
       <td><span class="badge ${s.estado.toLowerCase()}">${s.estado}</span></td>
-      <td style="display:flex;gap:6px;flex-wrap:wrap">
-        ${s.estado==='Pendiente' ? `
-          <button class="btn btn-green" onclick="abrirAprobar(${JSON.stringify(s).replace(/"/g,'&quot;')})">✅</button>
-          <button class="btn btn-red" onclick="abrirRechazar(${JSON.stringify(s).replace(/"/g,'&quot;')})">❌</button>
-        ` : ''}
-        ${s.id_token ? `<button class="btn btn-ghost" onclick="toggleToken(${s.id_token})" title="${s.token_activo?'Desactivar':'Activar'} token">${s.token_activo?'⏸':'▶'}</button>` : ''}
-      </td>
-    </tr>`).join('');
+      <td>${s.estado === 'Pendiente' ? `<button class="btn btn-green" onclick="abrirAprobar(${s.id_solicitud})">✅ Aprobar</button>
+        <button class="btn btn-red" onclick="abrirRechazar(${s.id_solicitud})">❌ Rechazar</button>` : '—'}</td>
+    </tr>
+  `).join('');
 }
 
 function filtrarSol(btn, estado) {
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   solFiltro = estado;
   loadSolicitudes();
 }
 
-function abrirAprobar(sol) {
-  solActual = sol;
-  document.getElementById('info-solicitante').innerHTML =
-    `<strong>${sol.nombre}</strong> · ${sol.correo}<br>
-     ${sol.empresa||''} ${sol.cargo?'· '+sol.cargo:''}<br>
-     <span style="color:var(--text)">${sol.motivo}</span>`;
-  document.getElementById('modal-aprobar').classList.add('open');
-}
+function abrirAprobar(id) { solActual = id; document.getElementById('modal-aprobar').classList.add('open'); }
+function abrirRechazar(id) { solActual = id; document.getElementById('modal-rechazar').classList.add('open'); }
+function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); solActual = null; }
 
-function abrirRechazar(sol) {
-  solActual = sol;
-  document.getElementById('info-rechazar').innerHTML =
-    `<strong>${sol.nombre}</strong> (${sol.correo})`;
-  document.getElementById('modal-rechazar').classList.add('open');
-}
-
-function closeModal() {
-  document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open'));
-  solActual = null;
-}
-
-async function confirmarAprobacion() {
-  if(!solActual) return;
-  const body = {
-    puede_leer:    document.getElementById('perm-leer').checked,
-    puede_escribir: document.getElementById('perm-escribir').checked,
-    max_requests_dia: parseInt(document.getElementById('max-req').value)||1000,
-    expira_en:     document.getElementById('expira-en').value||null,
-    notas:         document.getElementById('notas-aprobar').value,
-  };
-  const [res,d] = await apiFetch(`/api/admin/solicitudes/${solActual.id_solicitud}/aprobar`,
-    {method:'POST', body:JSON.stringify(body)});
-  if(res.ok) {
-    toast('Solicitud aprobada. Token generado.');
-    closeModal(); loadSolicitudes(); loadStats();
-  } else { toast(d.error||'Error', 'error'); }
-}
-
-async function confirmarRechazo() {
-  if(!solActual) return;
-  const notas = document.getElementById('notas-rechazar').value;
-  const [res,d] = await apiFetch(`/api/admin/solicitudes/${solActual.id_solicitud}/rechazar`,
-    {method:'POST', body:JSON.stringify({notas})});
-  if(res.ok) { toast('Solicitud rechazada.'); closeModal(); loadSolicitudes(); loadStats(); }
-  else { toast(d.error||'Error','error'); }
-}
-
-// ── Tokens ─────────────────────────────────────────────────
 async function loadTokens() {
-  const [,d] = await apiFetch('/api/admin/tokens');
-  const tb = document.getElementById('tabla-tokens');
+  const [, d] = await apiFetch('/api/admin/tokens');
   const list = d.tokens || [];
-  if(!list.length){ tb.innerHTML='<tr><td colspan="7" class="empty">Sin tokens</td></tr>'; return; }
+  const tb = document.getElementById('tabla-tokens');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin tokens</td></tr>'; return; }
   tb.innerHTML = list.map(t => `
     <tr>
-      <td><div style="font-weight:600;font-size:13px">${t.nombre_token}</div>
-          <div class="mono" style="font-size:11px;color:var(--muted)">${t.token_preview}</div></td>
-      <td style="font-size:12px">${t.nombre||'—'}<br><span style="color:var(--muted);font-size:11px">${t.correo||''}</span></td>
-      <td style="font-size:12px">
-        ${t.puede_leer?'<span class="badge aprobado">📖 Leer</span> ':''}
-        ${t.puede_escribir?'<span class="badge pendiente">✏️ Escribir</span>':''}
-      </td>
-      <td class="mono">${t.requests_hoy||0} / ${t.max_requests_dia||'∞'}</td>
-      <td class="mono">${t.total_usos||0}</td>
-      <td><span class="badge ${t.activo?'activo':'inactivo'}">${t.activo?'Activo':'Inactivo'}</span></td>
-      <td style="display:flex;gap:6px">
-        <button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo?'⏸ Pausar':'▶ Activar'}</button>
-        <button class="btn btn-red" onclick="eliminarToken(${t.id_token})">🗑</button>
-      </td>
-    </tr>`).join('');
+      <td>${t.nombre_token}</td>
+      <td>${t.nombre || t.correo || '—'}</td>
+      <td>${t.puede_leer ? '📖 Leer' : ''} ${t.puede_escribir ? '✏️ Escribir' : ''}</td>
+      <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
+      <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸' : '▶'}</button></td>
+    </tr>
+  `).join('');
 }
 
 async function toggleToken(id) {
-  const [res,d] = await apiFetch(`/api/admin/tokens/${id}/toggle`, {method:'PATCH'});
-  if(res.ok){ toast(d.mensaje); loadTokens(); loadSolicitudes(); }
-  else toast(d.error||'Error','error');
+  await apiFetch(`/api/admin/tokens/${id}/toggle`, { method: 'PATCH' });
+  loadTokens();
 }
 
-async function eliminarToken(id) {
-  if(!confirm('¿Eliminar este token? El usuario perderá acceso permanentemente.')) return;
-  const [res,d] = await apiFetch(`/api/admin/tokens/${id}`, {method:'DELETE'});
-  if(res.ok){ toast('Token eliminado.'); loadTokens(); }
-  else toast(d.error||'Error','error');
-}
-
-// ── Logs ───────────────────────────────────────────────────
 async function loadLogs() {
-  const [,d] = await apiFetch(`/api/admin/logs?page=${logPag}`);
-  logTotal = d.total_pages || 1;
-  document.getElementById('lbl-pag').textContent = `Pág ${logPag} / ${logTotal}`;
-  document.getElementById('btn-prev').disabled = logPag <= 1;
-  document.getElementById('btn-next').disabled = logPag >= logTotal;
-  const tb = document.getElementById('tabla-logs');
+  const [, d] = await apiFetch('/api/admin/logs?page=1');
   const list = d.logs || [];
-  if(!list.length){ tb.innerHTML='<tr><td colspan="8" class="empty">Sin logs</td></tr>'; return; }
+  const tb = document.getElementById('tabla-logs');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin logs</td></tr>'; return; }
   tb.innerHTML = list.map(l => `
     <tr>
-      <td class="mono" style="font-size:11px">${fmtDate(l.fecha_uso)}</td>
-      <td style="font-size:12px">${l.nombre_token||'—'}</td>
-      <td style="font-size:12px">${l.nombre_usuario||'—'}<br>
-          <span class="mono" style="font-size:10px;color:var(--muted)">${l.correo_usuario||''}</span></td>
-      <td><span class="method-tag ${(l.metodo||'').toLowerCase()}">${l.metodo}</span></td>
-      <td class="mono" style="font-size:11px">${l.endpoint}</td>
-      <td class="mono" style="font-size:11px">${l.ip_publica||'—'}</td>
-      <td class="mono" style="color:${l.exitoso?'var(--green)':'var(--red)'}">${l.codigo_respuesta}</td>
-      <td class="mono" style="font-size:11px">${l.tiempo_respuesta_ms||'—'}ms</td>
-    </tr>`).join('');
+      <td style="font-size:11px">${new Date(l.fecha_uso).toLocaleString()}</td>
+      <td>${l.nombre_usuario || '—'}</td>
+      <td><span class="badge aprobado">${l.metodo}</span></td>
+      <td class="mono" style="font-size:12px">${l.endpoint}</td>
+      <td class="mono" style="font-size:11px">${l.ip_publica || '—'}</td>
+      <td style="color:${l.exitoso ? 'var(--green)' : 'var(--red)'}">${l.codigo_respuesta}</td>
+    </tr>
+  `).join('');
 }
 
-function cambiarPagLogs(delta) { logPag = Math.max(1, Math.min(logTotal, logPag+delta)); loadLogs(); }
-
-// ── IPs ────────────────────────────────────────────────────
 async function loadIPs() {
-  const [,d] = await apiFetch('/api/admin/ips-bloqueadas');
-  const tb = document.getElementById('tabla-ips');
+  const [, d] = await apiFetch('/api/admin/ips-bloqueadas');
   const list = d.ips || [];
-  if(!list.length){ tb.innerHTML='<tr><td colspan="6" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
-  tb.innerHTML = list.map(i => `
-    <tr>
-      <td class="mono">${i.ip}</td>
-      <td style="font-size:13px">${i.motivo}</td>
-      <td style="font-size:12px">${i.bloqueado_por||'—'}</td>
-      <td style="font-size:12px">${fmtDate(i.fecha_bloqueo)}</td>
-      <td><span class="badge ${i.activo?'rechazado':'aprobado'}">${i.activo?'Bloqueada':'Libre'}</span></td>
-      <td>${i.activo?`<button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">✅ Desbloquear</button>`:'—'}</td>
-    </tr>`).join('');
-}
-
-async function bloquearIP() {
-  const ip = document.getElementById('nueva-ip').value.trim();
-  const motivo = document.getElementById('motivo-ip').value.trim() || 'Bloqueado manualmente';
-  if(!ip){ toast('Ingresa una IP','error'); return; }
-  const [res,d] = await apiFetch('/api/admin/ips-bloqueadas', {method:'POST', body:JSON.stringify({ip,motivo})});
-  if(res.ok){ toast(d.mensaje); document.getElementById('nueva-ip').value=''; document.getElementById('motivo-ip').value=''; loadIPs(); }
-  else toast(d.error||'Error','error');
+  const tb = document.getElementById('tabla-ips');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
+  tb.innerHTML = list.filter(i => i.activo).map(i => `
+    <tr><td class="mono">${i.ip}</td><td>${i.motivo}</td><td>${new Date(i.fecha_bloqueo).toLocaleDateString()}</td>
+    <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">Desbloquear</button></td></tr>
+  `).join('');
 }
 
 async function desbloquearIP(id) {
-  const [res,d] = await apiFetch(`/api/admin/ips-bloqueadas/${id}`, {method:'DELETE'});
-  if(res.ok){ toast('IP desbloqueada.'); loadIPs(); }
-  else toast(d.error||'Error','error');
+  await apiFetch(`/api/admin/ips-bloqueadas/${id}`, { method: 'DELETE' });
+  loadIPs();
+  toast('IP desbloqueada', 'success');
 }
 
-// ── Alertas ────────────────────────────────────────────────
 async function loadAlertas() {
-  const [,d] = await apiFetch('/api/admin/alertas');
-  const tb = document.getElementById('tabla-alertas');
+  const [, d] = await apiFetch('/api/admin/alertas');
   const list = d.alertas || [];
-  if(!list.length){ tb.innerHTML='<tr><td colspan="5" class="empty">Sin alertas</td></tr>'; return; }
+  const tb = document.getElementById('tabla-alertas');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Sin alertas</td></tr>'; return; }
   tb.innerHTML = list.map(a => `
-    <tr>
-      <td><span class="badge ${a.tipo.includes('limite')?'pendiente':'rechazado'}">${a.tipo}</span></td>
-      <td style="font-size:13px">${a.descripcion}</td>
-      <td class="mono" style="font-size:11px">${a.ip||'—'}</td>
-      <td style="font-size:12px">${a.correo_usuario||'—'}</td>
-      <td style="font-size:12px">${fmtDate(a.fecha_alerta)}</td>
-    </tr>`).join('');
+    <tr><td><span class="badge pendiente">${a.tipo}</span></td><td>${a.descripcion}</td>
+    <td style="font-size:12px">${new Date(a.fecha_alerta).toLocaleString()}</td></tr>
+  `).join('');
 }
 
-// ── Utils ──────────────────────────────────────────────────
-function fmtDate(str) {
-  if(!str) return '—';
-  const d = new Date(str);
-  return d.toLocaleDateString('es-GT',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+
-         d.toLocaleTimeString('es-GT',{hour:'2-digit',minute:'2-digit'});
+document.addEventListener('DOMContentLoaded', () => {
+  verificarAdmin();
+  document.getElementById('admin-password')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') loginAdmin();
+  });
+});
+</script>
+
+<!-- Modales -->
+<div class="modal-overlay" id="modal-aprobar"><div class="modal"><div class="modal-header"><span>Aprobar solicitud</span><button onclick="closeModal()">✕</button></div>
+<div class="modal-body"><div class="field"><label>Límite diario</label><input type="number" id="max-req" value="1000"></div>
+<div class="field"><label>Permiso escritura</label><input type="checkbox" id="perm-escribir"></div></div>
+<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+<button class="btn btn-green" onclick="confirmarAprobacion()">Aprobar</button></div></div></div>
+
+<div class="modal-overlay" id="modal-rechazar"><div class="modal"><div class="modal-header"><span>Rechazar solicitud</span><button onclick="closeModal()">✕</button></div>
+<div class="modal-body"><div class="field"><label>Motivo</label><textarea id="notas-rechazar" rows="3"></textarea></div></div>
+<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+<button class="btn btn-red" onclick="confirmarRechazo()">Rechazar</button></div></div></div>
+
+<script>
+async function confirmarAprobacion() {
+  if (!solActual) return;
+  const body = { puede_leer: true, puede_escribir: document.getElementById('perm-escribir').checked, max_requests_dia: parseInt(document.getElementById('max-req').value) };
+  await apiFetch(`/api/admin/solicitudes/${solActual}/aprobar`, { method: 'POST', body: JSON.stringify(body) });
+  closeModal(); loadSolicitudes(); loadStats(); toast('Solicitud aprobada', 'success');
 }
 
-function loadAll() { loadStats(); }
-
-// Init
-if(!localStorage.getItem(CONFIG.TOKEN_KEY)) { window.location.href='login.html'; }
-else { loadAll(); }
+async function confirmarRechazo() {
+  if (!solActual) return;
+  const notas = document.getElementById('notas-rechazar').value;
+  await apiFetch(`/api/admin/solicitudes/${solActual}/rechazar`, { method: 'POST', body: JSON.stringify({ notas }) });
+  closeModal(); loadSolicitudes(); loadStats(); toast('Solicitud rechazada', 'success');
+}
 </script>
 </body>
 </html>

@@ -63,6 +63,13 @@ DEFAULT_PER_PAGE = 20
 MAX_PER_PAGE = 100
 
 # ============================================================
+# RATE LIMITING (Control de intentos)
+# ============================================================
+RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "3600"))  # Ventana en segundos (1 hora)
+RATE_LIMIT_LOGIN_ATTEMPTS = int(os.getenv("RATE_LIMIT_LOGIN_ATTEMPTS", "5"))  # Intentos de login máximos
+RATE_LIMIT_API_ATTEMPTS = int(os.getenv("RATE_LIMIT_API_ATTEMPTS", "100"))  # Requests API máximos
+
+# ============================================================
 # TIPO DE BASE DE DATOS (para compatibilidad)
 # ============================================================
 DB_TYPE = os.getenv("DB_TYPE", "postgresql")  # postgresql o sqlserver
