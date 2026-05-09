@@ -1,10 +1,5 @@
 """
 cliente_routes.py - Capa de presentación/API para Clientes
-Correcciones:
-  - Validación Content-Type en métodos que reciben body
-  - get_json(silent=True) para no lanzar excepciones ante JSON malformado
-  - Manejo de caso data=None cuando el body está vacío
-  - Agregado endpoint /cumpleaneros (faltaba)
 """
 from flask import Blueprint, request, jsonify
 from services import cliente_service as service
@@ -80,12 +75,17 @@ def inactivar_cliente(id):
     return jsonify(service.inactivar_cliente(id, get_usuario()))
 
 
-# ── Rutas estáticas SIEMPRE antes de /<int:id> ──────────────────────────────
-
 @cliente_bp.route("/cumpleaneros", methods=["GET"])
 @token_required
 def get_cumpleaneros():
     return jsonify(service.get_cumpleaneros_mes())
+
+
+# ⭐ IMPORTANTE: Este es el endpoint que estaba faltando ⭐
+@cliente_bp.route("/stats", methods=["GET"])
+@token_required
+def get_stats_clientes():
+    return jsonify(service.get_stats_clientes())
 
 
 @cliente_bp.route("/tipos-cliente", methods=["GET"])
@@ -98,9 +98,3 @@ def get_tipos_cliente():
 @token_required
 def get_tipos_contacto():
     return jsonify(service.get_tipos_contacto())
-
-
-@cliente_bp.route("/stats", methods=["GET"])
-@token_required
-def get_stats_clientes():
-    return jsonify(service.get_stats_clientes())

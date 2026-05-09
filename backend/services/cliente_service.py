@@ -1,9 +1,5 @@
-""""
+"""
 cliente_service.py - Capa de lógica de negocio para Clientes
-Correcciones:
-  - Validación y sanitización de inputs
-  - Paginación segura con límites
-  - Manejo de errores explícito
 """
 import logging
 import re
@@ -16,7 +12,6 @@ _DEFAULT_PER_PAGE = 20
 
 TIPOS_CLIENTE_VALIDOS = {"Cliente", "Prospecto"}
 ESTADOS_VALIDOS = {"Activo", "Inactivo"}
-TIPOS_CONTACTO_VALIDOS = {"Teléfono", "Celular", "Email", "Dirección", "Fax"}
 
 
 def _sanitize(value, max_len=500) -> str:
@@ -27,7 +22,7 @@ def _sanitize(value, max_len=500) -> str:
 
 def _valid_email(email: str) -> bool:
     if not email:
-        return True  # email es opcional
+        return True
     return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email))
 
 
@@ -41,7 +36,6 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
     where_clauses = ["1=1"]
     params = []
 
-    # Filtrar por usuario si se proporciona (usuarios normales ven solo sus clientes)
     if usuario:
         where_clauses.append("usuario_creacion = %s")
         params.append(_sanitize(usuario, 80))
@@ -67,20 +61,19 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
 
     total_pages = max(1, (total + per_page - 1) // per_page)
     return {
-        "data":   clientes,
+        "data": clientes,
         "meta": {
-            "total":             total,
-            "page":              page,
-            "limit":             per_page,
-            "total_pages":       total_pages,
-            "has_next_page":     page < total_pages,
+            "total": total,
+            "page": page,
+            "limit": per_page,
+            "total_pages": total_pages,
+            "has_next_page": page < total_pages,
             "has_previous_page": page > 1,
         },
-        # Mantener compatibilidad con código legacy
-        "clientes":  clientes,
-        "total":     total,
-        "page":      page,
-        "per_page":  per_page,
+        "clientes": clientes,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
     }
 
 
@@ -112,11 +105,11 @@ def create_cliente(data: dict):
 
     clean_data = {
         **data,
-        "nombre_razon_social":      nombre,
+        "nombre_razon_social": nombre,
         "documento_identificacion": documento,
-        "tipo":                     tipo,
-        "estado":                   estado,
-        "correo":                   correo,
+        "tipo": tipo,
+        "estado": estado,
+        "correo": correo,
     }
 
     id_cliente, mensaje = repo.insert(clean_data)
@@ -124,7 +117,6 @@ def create_cliente(data: dict):
     if id_cliente:
         usuario = _sanitize(data.get("usuario", "sistema"))
         for contacto in data.get("contactos", []):
-            # Validar que el contacto tenga al menos contenido en nombre, teléfono o correo
             tiene_contenido = (
                 _sanitize(contacto.get("nombre_contacto", "")) or
                 _sanitize(contacto.get("telefono", ""), 20) or
@@ -152,18 +144,15 @@ def update_cliente(id_cliente, data: dict):
     if id_result:
         usuario = _sanitize(data.get("usuario", "sistema"))
         for contacto in data.get("contactos", []):
-            # Validar que el contacto tenga contenido
             tiene_contenido = (
                 _sanitize(contacto.get("nombre_contacto", "")) or
                 _sanitize(contacto.get("telefono", ""), 20) or
                 _sanitize(contacto.get("correo", ""), 200)
             )
             if contacto.get("id_contacto"):
-                # Actualizar contacto existente si tiene contenido
                 if tiene_contenido:
                     repo.update_contacto(contacto, usuario)
             elif tiene_contenido:
-                # Insertar nuevo contacto solo si tiene contenido
                 repo.insert_contacto(id_cliente, contacto, usuario)
         return {"id_cliente": id_result, "mensaje": mensaje}
 

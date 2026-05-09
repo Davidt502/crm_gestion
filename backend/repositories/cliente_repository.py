@@ -1,9 +1,5 @@
 """
 cliente_repository.py - Capa de acceso a datos para Clientes
-Correcciones:
-  - Context manager en todas las funciones (no fugas de conexión)
-  - OFFSET/FETCH parametrizados
-  - Manejo de excepciones con logging
 """
 import logging
 from database import db_connection, to_int, sp_result
@@ -218,7 +214,7 @@ def find_cumpleaneros_mes():
                 """
             )
             rows = cursor.fetchall()
-        result = [{"nombre": r[0], "dia": r[1], "edad": r[2]} for r in rows]
+        result = [{"nombre": r[0], "dia": r[1], "edad": r[2], "tipo": r[3]} for r in rows]
         logger.info(f"find_cumpleaneros_mes: found {len(result)} birthday records")
         return result
     except Exception as exc:
@@ -260,10 +256,10 @@ def get_stats_clientes():
             total_prospectos = cursor.fetchone()[0]
 
         return {
-            "total_activos":    total_activos,
-            "total_inactivos":  total_inactivos,
-            "total_prospectos": total_prospectos,
+            "clientes_activos": total_activos,
+            "clientes_inactivos": total_inactivos,
+            "prospectos": total_prospectos,
         }
     except Exception as exc:
         logger.error("get_stats_clientes: %s", exc, exc_info=True)
-        return {"total_activos": 0, "total_inactivos": 0, "total_prospectos": 0}
+        return {"clientes_activos": 0, "clientes_inactivos": 0, "prospectos": 0}

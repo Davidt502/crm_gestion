@@ -306,6 +306,11 @@ def debug_cumpleaneros():
 def api_get_dependencias():
     return jsonify(empleados_mod.get_all_dependencias())
 
+@app.route("/api/clientes/stats", methods=["GET"])
+@token_required
+def api_clientes_stats():
+    """Endpoint específico para estadísticas de clientes"""
+    return jsonify(cliente_service.get_stats_clientes())
 
 @app.route("/api/dependencias", methods=["POST"])
 @token_required

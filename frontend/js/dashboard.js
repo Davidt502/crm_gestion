@@ -12,6 +12,7 @@ function mostrarFechaActual() {
 
 async function cargarEstadisticas() {
     try {
+        // ⭐ Usar el endpoint correcto /api/clientes/stats ⭐
         const data = await apiJSON('/api/clientes/stats');
         if (data) {
             document.getElementById('stat-activos').textContent = data.clientes_activos || 0;
@@ -64,7 +65,6 @@ async function cargarCumpleaños() {
         
         let html = '';
         
-        // Sección de Clientes
         if (clientes.length > 0) {
             html += `
                 <div style="padding: 8px 16px 0 16px;">
@@ -88,7 +88,6 @@ async function cargarCumpleaños() {
             `).join('');
         }
         
-        // Sección de Prospectos
         if (prospectos.length > 0) {
             html += `
                 <div style="padding: 16px 16px 0 16px; margin-top: 8px;">
