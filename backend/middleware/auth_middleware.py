@@ -5,59 +5,99 @@ Correcciones:
   - Manejo estricto de algoritmos HS256 solamente
   - Sanitización del campo 'username' extraído del token
 """
+import jwt
 import logging
 from functools import wraps
 from flask import request, jsonify, g
-import jwt
+from datetime import datetime, timezone
 from config import SECRET_KEY
 
 logger = logging.getLogger(__name__)
 
+_revoked_tokens = set()
 
-def _extract_token() -> str | None:
-    """Extrae el JWT del header Authorization (Bearer)."""
-    auth_header = request.headers.get("Authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header[7:].strip()
-        return token if token else None
-    return None
+
+def revoke_token(token: str):
+    _revoked_tokens.add(token)
+    if len(_revoked_tokens) > 1000:
+        _revoked_tokens.clear()
+
+
+def is_token_revoked(token: str) -> bool:
+    return token in _revoked_tokens
 
 
 def token_required(f):
-    """Decorator para proteger endpoints con JWT."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        token = _extract_token()
-
+        token = None
+        
+        auth_header = request.headers.get('Authorization')
+        if auth_header and auth_header.startswith('Bearer '):
+            token = auth_header.split(' ')[1]
+        
         if not token:
-            logger.warning("Token de autenticación faltante desde %s", request.remote_addr)
             return jsonify({"error": "Token de autenticación requerido"}), 401
-
-        try:
-            # algorithms debe ser una lista explícita para evitar el ataque
-            # de confusión de algoritmo (CVE-2015-9235 style)
-            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        except jwt.ExpiredSignatureError:
-            logger.warning("Token expirado desde %s", request.remote_addr)
-            return jsonify({"error": "Token expirado. Inicia sesión nuevamente."}), 401
-        except jwt.InvalidTokenError as exc:
-            logger.warning("Token inválido desde %s: %s", request.remote_addr, exc)
+        
+        if is_token_revoked(token):
             return jsonify({"error": "Token inválido"}), 401
-
-        request.current_user = payload
-        # Inyectar en g para el módulo de auditoría
-        g.current_user_audit = {
-            "id_usuario": payload.get("id_usuario"),
-            "nombre":     payload.get("nombre"),
-            "username":   payload.get("username"),
-            "grupo":      payload.get("grupo", ""),
-        }
+        
+        try:
+            payload = jwt.decode(
+                token, 
+                SECRET_KEY, 
+                algorithms=["HS256"],
+                options={"require": ["exp"]},
+            )
+            
+            exp = payload.get('exp')
+            if exp and datetime.fromtimestamp(exp, tz=timezone.utc) < datetime.now(timezone.utc):
+                return jsonify({"error": "Token expirado"}), 401
+            
+            g.current_user = {
+                "id_usuario": payload.get('id_usuario'),
+                "username": payload.get('username'),
+                "nombre": payload.get('nombre'),
+                "rol": payload.get('rol'),
+                "grupo": payload.get('grupo', ''),
+            }
+            g.current_user_audit = g.current_user
+            
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token expirado"}), 401
+        except jwt.InvalidTokenError as e:
+            logger.warning(f"Token inválido: {str(e)}")
+            return jsonify({"error": "Token inválido"}), 401
+        
         return f(*args, **kwargs)
-
     return decorated
 
 
-def get_usuario() -> str:
-    """Retorna el username del token JWT del request actual."""
-    user = getattr(request, "current_user", {})
-    return str(user.get("username", "sistema"))[:64]
+def get_usuario():
+    """Obtiene el username del usuario actual"""
+    return getattr(g, 'current_user', {}).get('username', 'sistema')
+
+
+def get_current_user_rol():
+    """Obtiene el rol del usuario actual"""
+    return getattr(g, 'current_user', {}).get('rol', 'usuario')
+
+
+def get_current_user_id():
+    """Obtiene el ID del usuario actual"""
+    return getattr(g, 'current_user', {}).get('id_usuario')
+
+
+def get_current_user_nombre():
+    """Obtiene el nombre del usuario actual"""
+    return getattr(g, 'current_user', {}).get('nombre', 'Usuario')
+
+
+def require_admin(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        user = getattr(g, 'current_user', {})
+        if user.get('rol') != 'admin':
+            return jsonify({"error": "Acceso denegado. Se requiere rol de administrador."}), 403
+        return f(*args, **kwargs)
+    return decorated

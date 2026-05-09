@@ -3,6 +3,7 @@ cliente_service.py - Capa de lógica de negocio para Clientes
 """
 import logging
 import re
+from flask import g
 from repositories import cliente_repository as repo
 
 logger = logging.getLogger(__name__)
@@ -26,7 +27,12 @@ def _valid_email(email: str) -> bool:
     return bool(re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email))
 
 
-def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_DEFAULT_PER_PAGE, search=None, usuario=None):
+def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_DEFAULT_PER_PAGE, search=None):
+    """
+    Obtiene todos los clientes con paginación y filtros.
+    - Si el usuario es ADMIN: ve TODOS los clientes
+    - Si el usuario es NORMAL: ve SOLO sus clientes (usuario_creacion = su username)
+    """
     try:
         page = max(1, int(page))
         per_page = min(max(1, int(per_page)), _MAX_PER_PAGE)
@@ -36,20 +42,30 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
     where_clauses = ["1=1"]
     params = []
 
-    if usuario:
+    #  OBTENER ROL Y USUARIO DEL TOKEN (desde g) 
+    user_rol = getattr(g, 'current_user', {}).get('rol', 'usuario')
+    user_username = getattr(g, 'current_user', {}).get('username', 'sistema')
+    
+    # LÓGICA DE FILTRADO POR USUARIO 
+    # Solo filtrar por usuario_creacion si NO es administrador
+    if user_rol != 'admin':
         where_clauses.append("usuario_creacion = %s")
-        params.append(_sanitize(usuario, 80))
+        params.append(_sanitize(user_username, 80))
+        logger.debug(f"Usuario normal {user_username} - filtrando por sus clientes")
+    else:
+        logger.debug(f"Administrador {user_username} - viendo TODOS los clientes")
 
+    # Filtros de búsqueda
     if search:
-        where_clauses.append("(nombre_razon_social LIKE %s OR documento_identificacion LIKE %s)")
+        where_clauses.append("(nombre_razon_social ILIKE %s OR documento_identificacion ILIKE %s)")
         s = _sanitize(search)
         params.extend([f"%{s}%", f"%{s}%"])
     else:
         if nombre:
-            where_clauses.append("nombre_razon_social LIKE %s")
+            where_clauses.append("nombre_razon_social ILIKE %s")
             params.append(f"%{_sanitize(nombre)}%")
         if documento:
-            where_clauses.append("documento_identificacion LIKE %s")
+            where_clauses.append("documento_identificacion ILIKE %s")
             params.append(f"%{_sanitize(documento, 50)}%")
 
     if tipo and tipo in TIPOS_CLIENTE_VALIDOS:
@@ -78,10 +94,12 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
 
 
 def get_cliente_by_id(id_cliente):
+    """Obtiene un cliente por ID (sin restricciones adicionales)"""
     return repo.find_by_id(id_cliente)
 
 
 def create_cliente(data: dict):
+    """Crea un nuevo cliente con el usuario_creacion del token"""
     nombre = _sanitize(data.get("nombre_razon_social", ""))
     documento = _sanitize(data.get("documento_identificacion", ""), 50)
     correo = _sanitize(data.get("correo", ""), 200) or None
@@ -103,6 +121,9 @@ def create_cliente(data: dict):
     if errors:
         return {"error": " ".join(errors)}
 
+    #  OBTENER USUARIO DEL TOKEN 
+    usuario_creador = getattr(g, 'current_user', {}).get('username', 'sistema')
+
     clean_data = {
         **data,
         "nombre_razon_social": nombre,
@@ -110,12 +131,12 @@ def create_cliente(data: dict):
         "tipo": tipo,
         "estado": estado,
         "correo": correo,
+        "usuario": usuario_creador,  # ← Usuario del token
     }
 
     id_cliente, mensaje = repo.insert(clean_data)
 
     if id_cliente:
-        usuario = _sanitize(data.get("usuario", "sistema"))
         for contacto in data.get("contactos", []):
             tiene_contenido = (
                 _sanitize(contacto.get("nombre_contacto", "")) or
@@ -123,13 +144,14 @@ def create_cliente(data: dict):
                 _sanitize(contacto.get("correo", ""), 200)
             )
             if tiene_contenido:
-                repo.insert_contacto(id_cliente, contacto, usuario)
+                repo.insert_contacto(id_cliente, contacto, usuario_creador)
         return {"id_cliente": id_cliente, "mensaje": mensaje}
 
     return {"error": mensaje or "Error desconocido"}
 
 
 def update_cliente(id_cliente, data: dict):
+    """Actualiza un cliente existente"""
     nombre = _sanitize(data.get("nombre_razon_social", ""))
     correo = _sanitize(data.get("correo", ""), 200) or None
 
@@ -138,11 +160,12 @@ def update_cliente(id_cliente, data: dict):
     if correo and not _valid_email(correo):
         return {"error": "El correo electrónico no tiene un formato válido."}
 
-    clean_data = {**data, "nombre_razon_social": nombre, "correo": correo}
+    usuario_editor = getattr(g, 'current_user', {}).get('username', 'sistema')
+
+    clean_data = {**data, "nombre_razon_social": nombre, "correo": correo, "usuario": usuario_editor}
     id_result, mensaje = repo.update(id_cliente, clean_data)
 
     if id_result:
-        usuario = _sanitize(data.get("usuario", "sistema"))
         for contacto in data.get("contactos", []):
             tiene_contenido = (
                 _sanitize(contacto.get("nombre_contacto", "")) or
@@ -151,15 +174,16 @@ def update_cliente(id_cliente, data: dict):
             )
             if contacto.get("id_contacto"):
                 if tiene_contenido:
-                    repo.update_contacto(contacto, usuario)
+                    repo.update_contacto(contacto, usuario_editor)
             elif tiene_contenido:
-                repo.insert_contacto(id_cliente, contacto, usuario)
+                repo.insert_contacto(id_cliente, contacto, usuario_editor)
         return {"id_cliente": id_result, "mensaje": mensaje}
 
     return {"error": mensaje or "Error desconocido"}
 
 
 def inactivar_cliente(id_cliente, usuario="sistema"):
+    """Inactiva un cliente"""
     id_result, mensaje = repo.set_inactive(id_cliente, _sanitize(usuario))
     if id_result:
         return {"mensaje": mensaje}
@@ -167,14 +191,17 @@ def inactivar_cliente(id_cliente, usuario="sistema"):
 
 
 def get_cumpleaneros_mes():
+    """Obtiene los cumpleañeros del mes (sin restricción de usuario)"""
     return repo.find_cumpleaneros_mes()
 
 
 def get_stats():
+    """Obtiene estadísticas completas para el dashboard"""
     return repo.get_stats()
 
 
 def get_stats_clientes():
+    """Obtiene estadísticas específicas de clientes"""
     return repo.get_stats_clientes()
 
 

@@ -3,7 +3,7 @@ cliente_routes.py - Capa de presentación/API para Clientes
 """
 from flask import Blueprint, request, jsonify
 from services import cliente_service as service
-from middleware.auth_middleware import token_required, get_usuario
+from middleware.auth_middleware import token_required
 
 cliente_bp = Blueprint("clientes", __name__, url_prefix="/api/clientes")
 
@@ -11,13 +11,13 @@ cliente_bp = Blueprint("clientes", __name__, url_prefix="/api/clientes")
 @cliente_bp.route("", methods=["GET"])
 @token_required
 def get_clientes():
+    """Lista clientes - admin ve todos, usuario normal ve solo sus clientes"""
     try:
         page = max(1, int(request.args.get("page", 1)))
         per_page = max(1, int(request.args.get("limit", 20)))
     except (ValueError, TypeError):
         page, per_page = 1, 20
 
-    usuario = get_usuario()
     result = service.get_all_clientes(
         nombre=request.args.get("nombre") or None,
         documento=request.args.get("documento") or None,
@@ -25,7 +25,6 @@ def get_clientes():
         page=page,
         per_page=per_page,
         search=request.args.get("search") or None,
-        usuario=usuario,
     )
     return jsonify(result)
 
@@ -47,7 +46,6 @@ def create_cliente():
     data = request.get_json(silent=True)
     if data is None:
         return jsonify({"error": "Body JSON inválido o vacío"}), 400
-    data["usuario"] = get_usuario()
     result = service.create_cliente(data)
     if "error" in result:
         return jsonify(result), 400
@@ -62,7 +60,6 @@ def update_cliente(id):
     data = request.get_json(silent=True)
     if data is None:
         return jsonify({"error": "Body JSON inválido o vacío"}), 400
-    data["usuario"] = get_usuario()
     result = service.update_cliente(id, data)
     if "error" in result:
         return jsonify(result), 400
@@ -72,6 +69,7 @@ def update_cliente(id):
 @cliente_bp.route("/<int:id>/inactivar", methods=["PATCH"])
 @token_required
 def inactivar_cliente(id):
+    from middleware.auth_middleware import get_usuario
     return jsonify(service.inactivar_cliente(id, get_usuario()))
 
 
@@ -81,7 +79,6 @@ def get_cumpleaneros():
     return jsonify(service.get_cumpleaneros_mes())
 
 
-# ⭐ IMPORTANTE: Este es el endpoint que estaba faltando ⭐
 @cliente_bp.route("/stats", methods=["GET"])
 @token_required
 def get_stats_clientes():
