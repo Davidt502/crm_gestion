@@ -99,17 +99,32 @@ def find_by_id(id_cliente):
 def insert(data):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_registrar_cliente", [
-                data.get("nombre_razon_social", ""),
-                data.get("documento_identificacion", ""),
-                data.get("tipo", "Cliente"),
-                data.get("estado", "Activo"),
-                data.get("fecha_nacimiento") or None,
-                data.get("correo") or None,
-                1 if data.get("notificacion_email") else 0,
-                1 if data.get("notificacion_sms") else 0,
-                data.get("usuario", "sistema"),
-            ])
+            cursor.execute(
+                """
+                SELECT * FROM sp_registrar_cliente(
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::date,
+                    %s::varchar,
+                    %s::smallint,
+                    %s::smallint,
+                    %s::varchar
+                )
+                """,
+                [
+                    data.get("nombre_razon_social", ""),
+                    data.get("documento_identificacion", ""),
+                    data.get("tipo", "Cliente"),
+                    data.get("estado", "Activo"),
+                    data.get("fecha_nacimiento") or None,
+                    data.get("correo") or None,
+                    1 if data.get("notificacion_email") else 0,
+                    1 if data.get("notificacion_sms") else 0,
+                    data.get("usuario", "sistema"),
+                ],
+            )
             row = cursor.fetchone()
             id_cliente, mensaje, is_error = sp_result(row)
 
