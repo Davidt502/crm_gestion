@@ -22,21 +22,28 @@ let pendingReactivarId  = null;
 if (isLista) {
   document.addEventListener('DOMContentLoaded', () => {
     if (!requireAuth()) return;
-    verificarAdmin();
+    // FIX: verificar rol ANTES de intentar cargar; si no es admin redirigir y no hacer fetch
+    if (!verificarAdmin()) return;
     cargar();
   });
 }
 
-// Redirigir si no es admin
+// Redirigir si no es admin; retorna true si es admin, false si no
 function verificarAdmin() {
   const user = getUser();
   if (!user || user.rol !== 'admin') {
     showToast('Acceso denegado. Solo administradores pueden gestionar usuarios.', 'error');
     setTimeout(() => { window.location.href = '/dashboard.html'; }, 1800);
+    return false;
   }
+  return true;
 }
 
 async function cargar(page = 1) {
+  // FIX: cortar la petición si el usuario local no es admin, evitando el 403 en consola
+  const user = getUser();
+  if (!user || user.rol !== 'admin') return;
+
   const busqueda = document.getElementById('search-nombre')?.value.trim() || '';
   const estado   = document.getElementById('search-estado')?.value || '';
   const tbody    = document.getElementById('usuarios-tbody');
@@ -218,7 +225,6 @@ if (isForm) {
     if (USUARIO_ID) {
       cargarDatos(USUARIO_ID);
     } else {
-      // Nuevo usuario: mostrar campo de contraseña como obligatorio
       document.getElementById('section-password').style.display = 'block';
       document.getElementById('lbl-password').textContent = 'Contraseña *';
     }
@@ -238,10 +244,9 @@ async function cargarDatos(id) {
     document.getElementById('campo-nombre').value    = d.nombre    || '';
     document.getElementById('campo-email').value     = d.email     || '';
     document.getElementById('campo-username').value  = d.username  || '';
-    document.getElementById('campo-username').disabled = true; // username no editable
+    document.getElementById('campo-username').disabled = true;
     document.getElementById('campo-rol').value       = d.rol       || 'usuario';
 
-    // En edición: contraseña es opcional
     document.getElementById('section-password').style.display = 'block';
     document.getElementById('lbl-password').textContent = 'Nueva Contraseña (dejar en blanco para no cambiar)';
   } catch (e) {
@@ -258,7 +263,6 @@ async function guardar() {
 
   const isEdit = !!USUARIO_ID;
 
-  // Validaciones
   if (!nombre)          { showToast('El nombre es obligatorio.', 'error'); return; }
   if (!isEdit && !username) { showToast('El nombre de usuario es obligatorio.', 'error'); return; }
   if (!isEdit && !password) { showToast('La contraseña es obligatoria.', 'error'); return; }
@@ -274,7 +278,6 @@ async function guardar() {
   try {
     let res;
     if (isEdit) {
-      // 1. Actualizar datos
       res = await fetch(`${CONFIG.API_BASE_URL}/api/usuarios/${USUARIO_ID}`, {
         method: 'PUT',
         headers: getHeaders(),
@@ -283,7 +286,6 @@ async function guardar() {
       const d = await res.json();
       if (d.error) { showToast(d.error, 'error'); return; }
 
-      // 2. Cambiar contraseña solo si se ingresó una nueva
       if (password) {
         const resPwd = await fetch(`${CONFIG.API_BASE_URL}/api/usuarios/${USUARIO_ID}/password`, {
           method: 'PATCH',
@@ -297,7 +299,6 @@ async function guardar() {
       showToast(d.mensaje || 'Usuario actualizado correctamente.', 'success');
 
     } else {
-      // Crear usuario nuevo
       res = await fetch(`${CONFIG.API_BASE_URL}/api/usuarios`, {
         method: 'POST',
         headers: getHeaders(),

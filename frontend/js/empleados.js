@@ -40,7 +40,7 @@ async function cargarCumpleaneros() {
       { headers: getHeaders(false) }
     );
     const d   = await res.json();
-    const mes = now.getMonth() + 1; // 1-based
+    const mes = now.getMonth() + 1;
 
     const cumpleaneros = (d.empleados || []).filter(e => {
       if (!e.fecha_nacimiento) return false;
@@ -259,7 +259,6 @@ async function cargarDatos(id){
     document.getElementById('fecha_nacimiento').value = d.fecha_nacimiento || '';
     document.getElementById('telefono').value = d.telefono || '';
     document.getElementById('correo').value = d.correo || '';
-    // correo_empresarial no existe en el backend — poblamos desde correo
     if(document.getElementById('correo_empresarial')) 
       document.getElementById('correo_empresarial').value = d.correo || '';
     document.getElementById('direccion').value = d.direccion || '';
@@ -282,7 +281,6 @@ async function guardar(){
   if(corrEmp && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(corrEmp))
     { showToast('Correo empresarial inválido.', 'error'); return; }
 
-  // El backend solo soporta el campo "correo" — usamos correo_empresarial si correo está vacío
   const correoVal = document.getElementById('correo')?.value.trim() || corrEmp || null;
 
   const payload = {
@@ -359,24 +357,32 @@ async function confirmarReasignar(){
   const dep = document.getElementById('dep-nueva').value;
   const motivo = document.getElementById('motivo-reasignar').value.trim();
   const fecha = document.getElementById('fecha-efectiva-reasignar').value;
-  
+
   if(!dep){ showToast('Selecciona la nueva dependencia.', 'error'); return; }
   if(!motivo){ showToast('El motivo es obligatorio.', 'error'); return; }
-  
+
+  // FIX: validar que dep sea un número válido antes de parsear
+  const depInt = parseInt(dep, 10);
+  if(isNaN(depInt)){ showToast('Dependencia inválida. Selecciona una opción válida.', 'error'); return; }
+
+  // FIX: solo incluir fecha_efectiva si tiene valor, para no enviar null al backend
+  const bodyObj = {
+    id_dependencia_nueva: depInt,
+    motivo,
+  };
+  if(fecha) bodyObj.fecha_efectiva = fecha;
+
   try{
     const res = await fetch(`${CONFIG.API_BASE_URL}/api/empleados/${pendingReasignarId}/reasignar`, {
       method: 'PATCH',
       headers: getHeaders(),
-      body: JSON.stringify({
-        id_dependencia_nueva: parseInt(dep),
-        motivo,
-        fecha_efectiva: fecha || null
-      })
+      body: JSON.stringify(bodyObj)
     });
     const d = await res.json();
     if(d.error){ showToast(d.error, 'error'); return; }
     showToast(d.mensaje || 'Reasignación exitosa.', 'success');
     cerrarModal('modal-reasignar');
+    pendingReasignarId = null;
     cargar(1);
-  }catch(e){ showToast('Error.', 'error'); }
+  }catch(e){ showToast('Error al reasignar. Intenta de nuevo.', 'error'); }
 }

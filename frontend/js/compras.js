@@ -82,7 +82,6 @@ function renderTabla(items, total, page, per_page) {
     return;
   }
 
-  /* BUG #1 CORREGIDO: onclick usa data-attributes, no interpolación en la cadena */
   tbody.innerHTML = items.map(c => `
     <tr>
       <td>${escapeHtml(c.fecha_compra || '—')}</td>
@@ -140,7 +139,18 @@ function abrirEstado(btn) {
 }
 
 async function confirmarEstado() {
+  // FIX: guard para evitar enviar null como ID
+  if (!pendingEstadoId) {
+    showToast('No se ha seleccionado una compra.', 'error');
+    return;
+  }
+
   const est = document.getElementById('nuevo-estado').value;
+  if (!est) {
+    showToast('Selecciona un estado válido.', 'error');
+    return;
+  }
+
   const btnConfirmar = document.querySelector('#modal-estado .btn-gold');
   btnConfirmar.disabled = true;
   btnConfirmar.textContent = 'Actualizando...';
@@ -166,6 +176,7 @@ async function confirmarEstado() {
   } finally {
     btnConfirmar.disabled = false;
     btnConfirmar.textContent = 'Actualizar';
+    pendingEstadoId = null;
   }
 }
 
@@ -184,7 +195,6 @@ if (isForm) {
     if (fechaEl && !fechaEl.value) fechaEl.value = hoy;
     await cargarProveedoresActivos();
     if (COMPRA_ID) {
-      // Modo edición
       const breadcrumb = document.getElementById('compra-breadcrumb');
       const title      = document.getElementById('compra-title');
       if (breadcrumb) breadcrumb.textContent = 'Editar';
@@ -202,7 +212,6 @@ async function cargarDatosCompra(id) {
     const d = await res.json();
     if (d.error) { showToast(d.error, 'error'); return; }
 
-    // Esperar a que los proveedores carguen antes de setear valor
     const sel = document.getElementById('id_proveedor');
     const waitSel = () => new Promise(resolve => {
       const check = () => { if (!sel.disabled) resolve(); else setTimeout(check, 50); };
@@ -217,7 +226,6 @@ async function cargarDatosCompra(id) {
     document.getElementById('fecha_compra').value = d.fecha_compra || '';
     document.getElementById('notas').value        = d.notas || '';
 
-    // Cambiar botón guardar
     const btn = document.querySelector('.btn-gold[onclick="guardar()"]');
     if (btn) btn.textContent = '💾 Actualizar Compra';
   } catch (e) {
@@ -225,7 +233,6 @@ async function cargarDatosCompra(id) {
   }
 }
 
-/* BUG #2 CORREGIDO: solo carga proveedores activos */
 async function cargarProveedoresActivos() {
   const sel = document.getElementById('id_proveedor');
   if (!sel) return;
@@ -270,7 +277,6 @@ async function guardar() {
   if (!id_prov) { showToast('Selecciona un proveedor.', 'error'); return; }
   if (!prods)   { showToast('Describe los productos o servicios adquiridos.', 'error'); return; }
 
-  /* INCONSISTENCIA #1 CORREGIDA: monto estrictamente > 0 */
   const monto = parseFloat(montoRaw);
   if (isNaN(monto) || monto <= 0) {
     showToast('El monto debe ser mayor a 0.', 'error');
