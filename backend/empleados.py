@@ -1,17 +1,12 @@
 """
 empleados.py - Módulo empleados y dependencias
-Correcciones:
-  - Context manager (no fugas de conexión)
-  - Eliminada doble ejecución en create_dependencia (bug lógico)
-  - OFFSET/FETCH pasan como parámetros, no por f-string (SQL injection)
-  - Manejo de excepciones con logging
 """
 import logging
 from database import db_connection, to_int, sp_result
 
 logger = logging.getLogger(__name__)
 
-_MAX_STR = 500  # Longitud máxima para campos string
+_MAX_STR = 500
 
 
 def _sanitize_str(value, max_len=_MAX_STR) -> str:
@@ -21,7 +16,6 @@ def _sanitize_str(value, max_len=_MAX_STR) -> str:
 
 
 def _to_int_safe(value):
-    """Convierte a int sin lanzar excepción si el valor no es numérico."""
     try:
         return int(value)
     except (TypeError, ValueError):
@@ -51,7 +45,6 @@ def create_dependencia(data):
 
     try:
         with db_connection() as (conn, cursor):
-            # Verificar duplicado
             cursor.execute(
                 "SELECT COUNT(*) FROM dependencias WHERE nombre_dependencia = %s",
                 [nombre],
@@ -116,14 +109,12 @@ def get_all_empleados(nombre=None, dependencia=None, estado=None, page=1, per_pa
 
     try:
         with db_connection() as (conn, cursor):
-            # COUNT — where_str solo contiene literales de columna o %s parametrizado
             cursor.execute(
                 f"SELECT COUNT(*) FROM empleados e WHERE {where_str}",
                 params,
             )
             total = cursor.fetchone()[0]
 
-            # OFFSET y FETCH también se parametrizan
             cursor.execute(
                 f"""
                 SELECT e.id_empleado, e.numero_empleado, e.dpi, e.nombre_completo,
@@ -177,7 +168,7 @@ def get_empleado_by_id(id_empleado):
                        h.motivo, h.usuario
                 FROM historial_dependencia h
                 LEFT JOIN dependencias dep_origen ON h.id_dependencia_origen = dep_origen.id_dependencia
-                JOIN  dependencias dep_destino ON h.id_dependencia_destino = dep_destino.id_dependencia
+                JOIN dependencias dep_destino ON h.id_dependencia_destino = dep_destino.id_dependencia
                 WHERE h.id_empleado = %s
                 ORDER BY h.fecha_movimiento DESC
                 """,
@@ -203,18 +194,34 @@ def get_empleado_by_id(id_empleado):
 def create_empleado(data):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_registrar_empleado", [
-                _sanitize_str(data.get("numero_empleado", "")),
-                _sanitize_str(data.get("dpi", "")),
-                _sanitize_str(data.get("nombre_completo", "")),
-                _sanitize_str(data.get("cargo", "")) or None,
-                int(data["id_dependencia"]) if data.get("id_dependencia") else None,
-                data.get("fecha_nacimiento") or None,
-                _sanitize_str(data.get("correo", "")) or None,
-                _sanitize_str(data.get("telefono", "")) or None,
-                _sanitize_str(data.get("direccion", "")) or None,
-                _sanitize_str(data.get("usuario", "sistema")),
-            ])
+            cursor.execute(
+                """
+                SELECT * FROM sp_registrar_empleado(
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::integer,
+                    %s::date,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar
+                )
+                """,
+                [
+                    _sanitize_str(data.get("numero_empleado", "")),
+                    _sanitize_str(data.get("dpi", "")),
+                    _sanitize_str(data.get("nombre_completo", "")),
+                    _sanitize_str(data.get("cargo", "")) or None,
+                    int(data["id_dependencia"]) if data.get("id_dependencia") else None,
+                    data.get("fecha_nacimiento") or None,
+                    _sanitize_str(data.get("correo", "")) or None,
+                    _sanitize_str(data.get("telefono", "")) or None,
+                    _sanitize_str(data.get("direccion", "")) or None,
+                    _sanitize_str(data.get("usuario", "sistema")),
+                ],
+            )
             row = cursor.fetchone()
 
         id_emp, mensaje, is_error = sp_result(row)
@@ -229,22 +236,39 @@ def create_empleado(data):
 def update_empleado(id_empleado, data):
     try:
         with db_connection() as (conn, cursor):
-            # Primero verificar si el empleado existe
-            cursor.execute("SELECT id_empleado FROM empleados WHERE id_empleado = %s", [id_empleado])
+            cursor.execute(
+                "SELECT id_empleado FROM empleados WHERE id_empleado = %s",
+                [id_empleado]
+            )
             if not cursor.fetchone():
                 return {"error": "Empleado no encontrado"}
-            
-            cursor.callproc("sp_actualizar_empleado", [
-                id_empleado,
-                _sanitize_str(data.get("nombre_completo", "")),
-                _sanitize_str(data.get("cargo", "")) or None,
-                data.get("fecha_nacimiento") or None,
-                _sanitize_str(data.get("correo", "")) or None,
-                _sanitize_str(data.get("telefono", "")) or None,
-                _sanitize_str(data.get("direccion", "")) or None,
-                _sanitize_str(data.get("estado", "Activo"), 20),
-                _sanitize_str(data.get("usuario", "sistema")),
-            ])
+
+            cursor.execute(
+                """
+                SELECT * FROM sp_actualizar_empleado(
+                    %s::integer,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::date,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar
+                )
+                """,
+                [
+                    id_empleado,
+                    _sanitize_str(data.get("nombre_completo", "")),
+                    _sanitize_str(data.get("cargo", "")) or None,
+                    data.get("fecha_nacimiento") or None,
+                    _sanitize_str(data.get("correo", "")) or None,
+                    _sanitize_str(data.get("telefono", "")) or None,
+                    _sanitize_str(data.get("direccion", "")) or None,
+                    _sanitize_str(data.get("estado", "Activo"), 20),
+                    _sanitize_str(data.get("usuario", "sistema")),
+                ],
+            )
             row = cursor.fetchone()
 
         id_emp, mensaje, is_error = sp_result(row)
@@ -265,38 +289,37 @@ def reasignar_dependencia(id_empleado, data):
     if not motivo:
         return {"error": "El motivo de reasignación es obligatorio."}
 
-    fecha_efectiva = data.get("fecha_efectiva") or None
-
     try:
         with db_connection() as (conn, cursor):
-            # Verificar que el empleado existe
-            cursor.execute("SELECT id_empleado FROM empleados WHERE id_empleado = %s", [id_empleado])
+            cursor.execute(
+                "SELECT id_empleado FROM empleados WHERE id_empleado = %s",
+                [id_empleado]
+            )
             if not cursor.fetchone():
                 return {"error": "Empleado no encontrado."}
 
-            # Actualizar la dependencia del empleado
             cursor.execute(
-                "UPDATE empleados SET id_dependencia = %s WHERE id_empleado = %s",
-                [id_dep_nueva, id_empleado],
-            )
-
-            # Intentar via stored procedure; si no existe la columna fecha_efectiva, usar sin ella
-            try:
-                cursor.callproc("sp_reasignar_dependencia", [
+                """
+                SELECT * FROM sp_reasignar_dependencia(
+                    %s::integer,
+                    %s::integer,
+                    %s::varchar,
+                    %s::varchar
+                )
+                """,
+                [
                     id_empleado,
                     id_dep_nueva,
                     motivo,
                     _sanitize_str(data.get("usuario", "sistema")),
-                ])
-                row = cursor.fetchone()
-                id_res, mensaje, is_error = sp_result(row)
-                if is_error:
-                    return {"error": mensaje or "Error al reasignar dependencia."}
-            except Exception:
-                # Si el SP falla, el UPDATE ya actualizó la dependencia
-                pass
+                ],
+            )
+            row = cursor.fetchone()
 
-        return {"mensaje": "Dependencia reasignada exitosamente."}
+        id_res, mensaje, is_error = sp_result(row)
+        if is_error:
+            return {"error": mensaje or "Error al reasignar dependencia."}
+        return {"mensaje": mensaje}
     except Exception as exc:
         logger.error("reasignar_dependencia: %s", exc, exc_info=True)
         return {"error": "Error al reasignar dependencia."}
