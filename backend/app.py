@@ -412,6 +412,17 @@ def api_create_compra():
     return (jsonify(r), 400) if "error" in r else (jsonify(r), 201)
 
 
+@app.route("/api/compras/<int:id>", methods=["PUT"])
+@token_required
+def api_update_compra(id):
+    if not request.is_json:
+        return jsonify({"error": "Content-Type debe ser application/json"}), 400
+    data = request.get_json(silent=True) or {}
+    data["usuario"] = get_usuario()
+    r = compras_mod.update_compra(id, data)
+    return (jsonify(r), 400) if "error" in r else jsonify(r)
+
+
 @app.route("/api/compras/<int:id>/estado", methods=["PATCH"])
 @token_required
 def api_estado_compra(id):

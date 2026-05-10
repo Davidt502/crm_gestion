@@ -254,12 +254,15 @@ def get_stats_clientes():
             total_inactivos = cursor.fetchone()[0]
             cursor.execute("SELECT COUNT(*) FROM clientes WHERE tipo='Prospecto'")
             total_prospectos = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM proveedores WHERE estado='Activo'")
+            prov_activos = cursor.fetchone()[0]
 
         return {
             "clientes_activos": total_activos,
             "clientes_inactivos": total_inactivos,
             "prospectos": total_prospectos,
+            "proveedores_activos": prov_activos,
         }
     except Exception as exc:
         logger.error("get_stats_clientes: %s", exc, exc_info=True)
-        return {"clientes_activos": 0, "clientes_inactivos": 0, "prospectos": 0}
+        return {"clientes_activos": 0, "clientes_inactivos": 0, "prospectos": 0, "proveedores_activos": 0}

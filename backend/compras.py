@@ -137,6 +137,56 @@ def create_compra(data):
         return {"error": "Error al registrar la compra."}
 
 
+def update_compra(id_compra, data):
+    """Actualiza todos los campos de una compra existente."""
+    try:
+        monto = float(data.get("monto_total", 0))
+        if monto <= 0:
+            return {"error": "El monto debe ser mayor a 0."}
+
+        estado = _sanitize_str(data.get("estado_pago", "Pendiente"), 20)
+        if estado not in ESTADOS_PAGO_VALIDOS:
+            estado = "Pendiente"
+
+        with db_connection() as (conn, cursor):
+            # Verificar que la compra existe
+            cursor.execute(
+                "SELECT COUNT(*) FROM compras_proveedor WHERE id_compra = %s",
+                [id_compra],
+            )
+            if cursor.fetchone()[0] == 0:
+                return {"error": "Compra no encontrada."}
+
+            cursor.execute(
+                """
+                UPDATE compras_proveedor
+                SET id_proveedor         = %s,
+                    fecha_compra         = %s,
+                    productos            = %s,
+                    monto_total          = %s,
+                    estado_pago          = %s,
+                    notas                = %s,
+                    fecha_modificacion   = NOW(),
+                    usuario_modificacion = %s
+                WHERE id_compra = %s
+                """,
+                [
+                    int(data.get("id_proveedor", 0)),
+                    data.get("fecha_compra") or None,
+                    _sanitize_str(data.get("productos", "")),
+                    monto,
+                    estado,
+                    _sanitize_str(data.get("notas", "")) or None,
+                    _sanitize_str(data.get("usuario", "sistema")),
+                    id_compra,
+                ],
+            )
+        return {"id_compra": id_compra, "mensaje": "Compra actualizada exitosamente."}
+    except Exception as exc:
+        logger.error("update_compra: %s", exc, exc_info=True)
+        return {"error": "Error al actualizar la compra."}
+
+
 def update_estado_pago(id_compra, estado_pago, usuario="sistema"):
     if estado_pago not in ESTADOS_PAGO_VALIDOS:
         return {"error": f"Estado de pago inválido. Valores permitidos: {', '.join(ESTADOS_PAGO_VALIDOS)}"}
