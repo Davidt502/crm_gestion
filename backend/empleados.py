@@ -229,6 +229,11 @@ def create_empleado(data):
 def update_empleado(id_empleado, data):
     try:
         with db_connection() as (conn, cursor):
+            # Primero verificar si el empleado existe
+            cursor.execute("SELECT id_empleado FROM empleados WHERE id_empleado = %s", [id_empleado])
+            if not cursor.fetchone():
+                return {"error": "Empleado no encontrado"}
+            
             cursor.callproc("sp_actualizar_empleado", [
                 id_empleado,
                 _sanitize_str(data.get("nombre_completo", "")),
@@ -248,7 +253,7 @@ def update_empleado(id_empleado, data):
         return {"id_empleado": id_emp, "mensaje": mensaje}
     except Exception as exc:
         logger.error("update_empleado: %s", exc, exc_info=True)
-        return {"error": "Error al actualizar el empleado."}
+        return {"error": str(exc)}
 
 
 def reasignar_dependencia(id_empleado, data):
