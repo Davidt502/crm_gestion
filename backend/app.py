@@ -253,9 +253,13 @@ def api_verify():
 @app.route("/api/dashboard/stats", methods=["GET"])
 @token_required
 def api_stats():
+    from middleware.auth_middleware import get_current_user_rol
+    rol = getattr(g, 'current_user', {}).get('rol', 'usuario')
+    username = getattr(g, 'current_user', {}).get('username', 'sistema')
+
     stats = cliente_service.get_stats()
-    stats.update(empleados_mod.get_stats_empleados())
-    stats.update(compras_mod.get_stats_compras())
+    stats.update(empleados_mod.get_stats_empleados(username=username, rol=rol))
+    stats.update(compras_mod.get_stats_compras(username=username, rol=rol))
     return jsonify(stats)
 
 

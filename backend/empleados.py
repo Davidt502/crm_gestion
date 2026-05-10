@@ -2,7 +2,8 @@
 empleados.py - Módulo empleados y dependencias
 """
 import logging
-from database import db_connection, to_int, sp_result
+from flask import g
+from database import db_connection, sp_result
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,11 @@ def _to_int_safe(value):
         return int(value)
     except (TypeError, ValueError):
         return None
+
+
+def _get_user_context():
+    user = getattr(g, 'current_user', {}) or {}
+    return user.get('rol', 'usuario'), user.get('username', 'sistema')
 
 
 # ── Dependencias ──────────────────────────────────────────────
@@ -90,8 +96,15 @@ def get_all_empleados(nombre=None, dependencia=None, estado=None, page=1, per_pa
     per_page = min(max(1, int(per_page)), 100)
     offset = (page - 1) * per_page
 
+    rol, username = _get_user_context()
+
     where = ["1=1"]
     params = []
+
+    # Filtrar por usuario si no es admin
+    if rol != 'admin':
+        where.append("e.usuario_creacion = %s")
+        params.append(username)
 
     if nombre:
         where.append("e.nombre_completo LIKE %s")
@@ -325,15 +338,28 @@ def reasignar_dependencia(id_empleado, data):
         return {"error": "Error al reasignar dependencia."}
 
 
-def get_stats_empleados():
+def get_stats_empleados(username=None, rol=None):
     try:
+        where = "1=1"
+        params = []
+        if rol and rol != 'admin' and username:
+            where = "usuario_creacion = %s"
+            params.append(username)
+
         with db_connection() as (conn, cursor):
-            cursor.execute("SELECT COUNT(*) FROM empleados WHERE estado='Activo'")
+            cursor.execute(
+                f"SELECT COUNT(*) FROM empleados WHERE estado='Activo' AND {where}",
+                params,
+            )
             activos = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM empleados WHERE estado='Inactivo'")
+            cursor.execute(
+                f"SELECT COUNT(*) FROM empleados WHERE estado='Inactivo' AND {where}",
+                params,
+            )
             inactivos = cursor.fetchone()[0]
             cursor.execute("SELECT COUNT(*) FROM dependencias WHERE estado='Activo'")
             deps = cursor.fetchone()[0]
+
         return {"activos": activos, "inactivos": inactivos, "dependencias": deps}
     except Exception as exc:
         logger.error("get_stats_empleados: %s", exc, exc_info=True)

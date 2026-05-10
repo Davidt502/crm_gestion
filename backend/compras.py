@@ -1,14 +1,9 @@
 """
 compras.py - Módulo compras a proveedores
-Correcciones:
-  - Context manager (no fugas de conexión)
-  - OFFSET/FETCH parametrizados (no f-string con enteros calculados sin validar)
-  - Validación de estado_pago con lista blanca
-  - Sanitización de entradas
-  - Manejo de excepciones con logging
 """
 import logging
-from database import db_connection, to_int, sp_result
+from flask import g
+from database import db_connection, sp_result
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +14,11 @@ def _sanitize_str(value, max_len=500) -> str:
     if not isinstance(value, str):
         return ""
     return value.strip()[:max_len]
+
+
+def _get_user_context():
+    user = getattr(g, 'current_user', {}) or {}
+    return user.get('rol', 'usuario'), user.get('username', 'sistema')
 
 
 def _row_compra(r):
@@ -40,8 +40,15 @@ def get_all_compras(proveedor=None, estado_pago=None, page=1, per_page=20):
     per_page = min(max(1, int(per_page)), 100)
     offset = (page - 1) * per_page
 
+    rol, username = _get_user_context()
+
     where = ["1=1"]
     params = []
+
+    # Filtrar por usuario si no es admin
+    if rol != 'admin':
+        where.append("c.usuario_creacion = %s")
+        params.append(username)
 
     if proveedor:
         where.append("p.nombre_empresa LIKE %s")
@@ -116,16 +123,31 @@ def create_compra(data):
         if estado not in ESTADOS_PAGO_VALIDOS:
             estado = "Pendiente"
 
+        usuario = _sanitize_str(data.get("usuario", "sistema"))
+
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_registrar_compra_proveedor", [
-                int(data.get("id_proveedor", 0)),
-                data.get("fecha_compra") or None,
-                _sanitize_str(data.get("productos", "")),
-                monto,
-                estado,
-                _sanitize_str(data.get("notas", "")) or None,
-                _sanitize_str(data.get("usuario", "sistema")),
-            ])
+            cursor.execute(
+                """
+                SELECT * FROM sp_registrar_compra_proveedor(
+                    %s::integer,
+                    %s::date,
+                    %s::text,
+                    %s::numeric,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar
+                )
+                """,
+                [
+                    int(data.get("id_proveedor", 0)),
+                    data.get("fecha_compra") or None,
+                    _sanitize_str(data.get("productos", "")),
+                    monto,
+                    estado,
+                    _sanitize_str(data.get("notas", "")) or None,
+                    usuario,
+                ],
+            )
             row = cursor.fetchone()
 
         id_compra, mensaje, is_error = sp_result(row)
@@ -138,7 +160,6 @@ def create_compra(data):
 
 
 def update_compra(id_compra, data):
-    """Actualiza todos los campos de una compra existente."""
     try:
         monto = float(data.get("monto_total", 0))
         if monto <= 0:
@@ -149,7 +170,6 @@ def update_compra(id_compra, data):
             estado = "Pendiente"
 
         with db_connection() as (conn, cursor):
-            # Verificar que la compra existe
             cursor.execute(
                 "SELECT COUNT(*) FROM compras_proveedor WHERE id_compra = %s",
                 [id_compra],
@@ -189,11 +209,10 @@ def update_compra(id_compra, data):
 
 def update_estado_pago(id_compra, estado_pago, usuario="sistema"):
     if estado_pago not in ESTADOS_PAGO_VALIDOS:
-        return {"error": f"Estado de pago inválido. Valores permitidos: {', '.join(ESTADOS_PAGO_VALIDOS)}"}
+        return {"error": f"Estado inválido. Valores permitidos: {', '.join(ESTADOS_PAGO_VALIDOS)}"}
 
     try:
         with db_connection() as (conn, cursor):
-            # Verificar que la compra existe antes de actualizar
             cursor.execute(
                 "SELECT COUNT(*) FROM compras_proveedor WHERE id_compra = %s",
                 [id_compra],
@@ -204,8 +223,8 @@ def update_estado_pago(id_compra, estado_pago, usuario="sistema"):
             cursor.execute(
                 """
                 UPDATE compras_proveedor
-                SET estado_pago = %s,
-                    fecha_modificacion = NOW(),
+                SET estado_pago          = %s,
+                    fecha_modificacion   = NOW(),
                     usuario_modificacion = %s
                 WHERE id_compra = %s
                 """,
@@ -217,14 +236,29 @@ def update_estado_pago(id_compra, estado_pago, usuario="sistema"):
         return {"error": "Error al actualizar el estado de pago."}
 
 
-def get_stats_compras():
+def get_stats_compras(username=None, rol=None):
     try:
+        where = "1=1"
+        params = []
+        if rol and rol != 'admin' and username:
+            where = "usuario_creacion = %s"
+            params.append(username)
+
         with db_connection() as (conn, cursor):
-            cursor.execute("SELECT COUNT(*), COALESCE(SUM(monto_total),0) FROM compras_proveedor")
+            cursor.execute(
+                f"SELECT COUNT(*), COALESCE(SUM(monto_total),0) FROM compras_proveedor WHERE {where}",
+                params,
+            )
             r1 = cursor.fetchone()
-            cursor.execute("SELECT COUNT(*) FROM compras_proveedor WHERE estado_pago='Pendiente'")
+            cursor.execute(
+                f"SELECT COUNT(*) FROM compras_proveedor WHERE estado_pago='Pendiente' AND {where}",
+                params,
+            )
             pendientes = cursor.fetchone()[0]
-            cursor.execute("SELECT COUNT(*) FROM compras_proveedor WHERE estado_pago='Pagado'")
+            cursor.execute(
+                f"SELECT COUNT(*) FROM compras_proveedor WHERE estado_pago='Pagado' AND {where}",
+                params,
+            )
             pagadas = cursor.fetchone()[0]
 
         return {

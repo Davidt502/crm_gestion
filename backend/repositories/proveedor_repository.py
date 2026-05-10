@@ -1,10 +1,5 @@
 """
 proveedor_repository.py - Capa de acceso a datos para Proveedores
-Correcciones:
-  - Context manager en todas las funciones (no fugas de conexión)
-  - OFFSET/FETCH parametrizados
-  - Manejo de excepciones con logging
-  - Conversión de filas a diccionarios con función auxiliar
 """
 import logging
 from database import db_connection
@@ -107,17 +102,25 @@ def find_all_categorias():
 def insert(data):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_registrar_proveedor", [
-                data.get("nombre_empresa", ""),
-                data.get("nit", ""),
-                int(data.get("id_categoria", 0)),
-                data.get("telefono", ""),
-                data.get("contacto") or None,
-                data.get("correo") or None,
-                data.get("direccion") or None,
-                data.get("notas") or None,
-                data.get("usuario", "sistema"),
-            ])
+            cursor.execute(
+                """
+                SELECT * FROM sp_registrar_proveedor(
+                    %s::text, %s::text, %s::integer, %s::text,
+                    %s::text, %s::text, %s::text, %s::text, %s::text
+                )
+                """,
+                [
+                    data.get("nombre_empresa", ""),
+                    data.get("nit", ""),
+                    int(data.get("id_categoria", 0)),
+                    data.get("telefono", ""),
+                    data.get("contacto") or None,
+                    data.get("correo") or None,
+                    data.get("direccion") or None,
+                    data.get("notas") or None,
+                    data.get("usuario", "sistema"),
+                ],
+            )
             row = cursor.fetchone()
         return row
     except Exception as exc:
@@ -128,18 +131,26 @@ def insert(data):
 def update(id_proveedor, data):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_actualizar_proveedor", [
-                id_proveedor,
-                data.get("nombre_empresa", ""),
-                data.get("nit", ""),
-                int(data.get("id_categoria", 0)),
-                data.get("telefono", ""),
-                data.get("contacto") or None,
-                data.get("correo") or None,
-                data.get("direccion") or None,
-                data.get("notas") or None,
-                data.get("usuario", "sistema"),
-            ])
+            cursor.execute(
+                """
+                SELECT * FROM sp_actualizar_proveedor(
+                    %s::integer, %s::text, %s::text, %s::integer, %s::text,
+                    %s::text, %s::text, %s::text, %s::text, %s::text
+                )
+                """,
+                [
+                    id_proveedor,
+                    data.get("nombre_empresa", ""),
+                    data.get("nit", ""),
+                    int(data.get("id_categoria", 0)),
+                    data.get("telefono", ""),
+                    data.get("contacto") or None,
+                    data.get("correo") or None,
+                    data.get("direccion") or None,
+                    data.get("notas") or None,
+                    data.get("usuario", "sistema"),
+                ],
+            )
             row = cursor.fetchone()
         return row
     except Exception as exc:
@@ -150,7 +161,10 @@ def update(id_proveedor, data):
 def set_inactive(id_proveedor, motivo, usuario):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_inactivar_proveedor", [id_proveedor, motivo, usuario])
+            cursor.execute(
+                "SELECT * FROM sp_inactivar_proveedor(%s::integer, %s::text, %s::text)",
+                [id_proveedor, motivo, usuario],
+            )
             row = cursor.fetchone()
         return row
     except Exception as exc:
@@ -161,7 +175,10 @@ def set_inactive(id_proveedor, motivo, usuario):
 def set_active(id_proveedor, usuario):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_activar_proveedor", [id_proveedor, usuario])
+            cursor.execute(
+                "SELECT * FROM sp_activar_proveedor(%s::integer, %s::text)",
+                [id_proveedor, usuario],
+            )
             row = cursor.fetchone()
         return row
     except Exception as exc:
@@ -172,7 +189,10 @@ def set_active(id_proveedor, usuario):
 def delete(id_proveedor, usuario):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_eliminar_proveedor", [id_proveedor, usuario])
+            cursor.execute(
+                "SELECT * FROM sp_eliminar_proveedor(%s::integer, %s::text)",
+                [id_proveedor, usuario],
+            )
             row = cursor.fetchone()
         return row
     except Exception as exc:
