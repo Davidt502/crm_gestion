@@ -237,7 +237,14 @@ async function cargarDatos(id){
       headers: getHeaders(false)
     });
     const d = await res.json();
+
     if(d.error){ showToast(d.error, 'error'); return; }
+
+    if (!d || !d.id_empleado) {
+            showToast('Empleado no encontrado', 'error');
+            setTimeout(() => window.location.href = '/empleados.html', 1500);
+            return;
+        }
     
     document.getElementById('form-title').textContent = 'Editar Empleado';
     document.getElementById('form-breadcrumb').textContent = 'Editar';
