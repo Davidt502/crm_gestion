@@ -172,12 +172,12 @@ def get_empleado_by_id(id_empleado):
             cursor.execute(
                 """
                 SELECT h.fecha_movimiento,
-                       COALESCE(do.nombre_dependencia,'Inicio') AS origen,
-                       dd.nombre_dependencia AS destino,
+                       COALESCE(dep_origen.nombre_dependencia,'Inicio') AS origen,
+                       dep_destino.nombre_dependencia AS destino,
                        h.motivo, h.usuario
                 FROM historial_dependencia h
-                LEFT JOIN dependencias do ON h.id_dependencia_origen  = do.id_dependencia
-                JOIN  dependencias dd ON h.id_dependencia_destino = dd.id_dependencia
+                LEFT JOIN dependencias dep_origen ON h.id_dependencia_origen = dep_origen.id_dependencia
+                JOIN  dependencias dep_destino ON h.id_dependencia_destino = dep_destino.id_dependencia
                 WHERE h.id_empleado = %s
                 ORDER BY h.fecha_movimiento DESC
                 """,
