@@ -137,22 +137,37 @@ def insert_contacto(id_cliente, contacto, usuario):
     except Exception as exc:
         logger.error("insert_contacto: %s", exc, exc_info=True)
 
-
 def update(id_cliente, data):
     try:
         with db_connection() as (conn, cursor):
-            cursor.callproc("sp_actualizar_cliente", [
-                id_cliente,
-                data.get("nombre_razon_social", ""),
-                data.get("documento_identificacion", ""),
-                data.get("tipo", "Cliente"),
-                data.get("estado", "Activo"),
-                data.get("fecha_nacimiento") or None,
-                data.get("correo") or None,
-                1 if data.get("notificacion_email") else 0,
-                1 if data.get("notificacion_sms") else 0,
-                data.get("usuario", "sistema"),
-            ])
+            cursor.execute(
+                """
+                SELECT * FROM sp_actualizar_cliente(
+                    %s::integer,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::varchar,
+                    %s::date,
+                    %s::varchar,
+                    %s::smallint,
+                    %s::smallint,
+                    %s::varchar
+                )
+                """,
+                [
+                    id_cliente,
+                    data.get("nombre_razon_social", ""),
+                    data.get("documento_identificacion", ""),
+                    data.get("tipo", "Cliente"),
+                    data.get("estado", "Activo"),
+                    data.get("fecha_nacimiento") or None,
+                    data.get("correo") or None,
+                    1 if data.get("notificacion_email") else 0,
+                    1 if data.get("notificacion_sms") else 0,
+                    data.get("usuario", "sistema"),
+                ],
+            )
             row = cursor.fetchone()
             id_result, mensaje, is_error = sp_result(row)
 
