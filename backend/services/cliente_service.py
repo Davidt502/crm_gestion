@@ -31,7 +31,10 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
     """
     Obtiene todos los clientes con paginación y filtros.
     - Si el usuario es ADMIN: ve TODOS los clientes
-    - Si el usuario es NORMAL: ve SOLO sus clientes (usuario_creacion = su username)
+    - Si el usuario es NORMAL: ve SOLO los clientes que él creó (usuario_creacion = su username)
+
+    CORRECCIÓN: se usa g.current_user con fallback seguro; el filtro por
+    usuario_creacion solo se aplica si el rol NO es 'admin'.
     """
     try:
         page = max(1, int(page))
@@ -42,18 +45,18 @@ def get_all_clientes(nombre=None, documento=None, tipo=None, page=1, per_page=_D
     where_clauses = ["1=1"]
     params = []
 
-    #  OBTENER ROL Y USUARIO DEL TOKEN (desde g) 
-    user_rol = getattr(g, 'current_user', {}).get('rol', 'usuario')
-    user_username = getattr(g, 'current_user', {}).get('username', 'sistema')
-    
-    # LÓGICA DE FILTRADO POR USUARIO 
-    # Solo filtrar por usuario_creacion si NO es administrador
+    # Leer rol y username del token JWT (almacenado en flask.g por token_required)
+    current_user = getattr(g, 'current_user', None) or {}
+    user_rol      = current_user.get('rol', 'usuario')
+    user_username = current_user.get('username', 'sistema')
+
+    # Filtro por propietario: solo para usuarios no-admin
     if user_rol != 'admin':
         where_clauses.append("usuario_creacion = %s")
         params.append(_sanitize(user_username, 80))
-        logger.debug(f"Usuario normal {user_username} - filtrando por sus clientes")
+        logger.debug(f"Usuario normal '{user_username}' — filtrando por sus clientes")
     else:
-        logger.debug(f"Administrador {user_username} - viendo TODOS los clientes")
+        logger.debug(f"Administrador '{user_username}' — viendo TODOS los clientes")
 
     # Filtros de búsqueda
     if search:

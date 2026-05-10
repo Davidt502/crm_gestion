@@ -72,7 +72,7 @@ def _solo_admin(f):
     from functools import wraps
     @wraps(f)
     def decorated(*args, **kwargs):
-        user = getattr(request, "current_user", {})
+        user = getattr(g, "current_user", {}) or {}
         if user.get("rol") != "admin":
             return jsonify({"error": "Acceso denegado. Se requiere rol de administrador."}), 403
         return f(*args, **kwargs)
