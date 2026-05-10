@@ -456,6 +456,7 @@ def api_register():
     username = str(data.get("username", "")).strip()
     email = str(data.get("email", "")).strip()
     password = str(data.get("password", ""))
+    rol = str(data.get("rol", "usuario")).strip()  # Por defecto 'usuario', puede ser 'admin' si lo permite
     
     # Validaciones
     if not nombre or not username or not email or not password:
@@ -464,7 +465,10 @@ def api_register():
     if len(password) < 6:
         return jsonify({"error": "La contraseña debe tener al menos 6 caracteres"}), 400
     
-    # Importar bcrypt (asegúrate de tenerlo en requirements.txt)
+    if rol not in ['admin', 'usuario']:
+        return jsonify({"error": "Rol inválido. Debe ser 'admin' o 'usuario'"}), 400
+    
+    # Importar bcrypt
     try:
         import bcrypt
     except ImportError:
@@ -488,32 +492,43 @@ def api_register():
             # Hashear contraseña
             hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
             
-            # Insertar nuevo usuario (por defecto rol='usuario', no admin)
+            # Insertar nuevo usuario - CORREGIDO para la estructura de la tabla
+            # La tabla NO tiene campo 'grupo', así que lo omitimos
             cursor.execute("""
-                INSERT INTO usuarios (nombre, username, email, password_hash, rol, estado, usuario_creacion, fecha_creacion)
-                VALUES (%s, %s, %s, %s, %s, 'Activo', 'registro_publico', NOW())
+                INSERT INTO usuarios (
+                    nombre, 
+                    username, 
+                    email, 
+                    password_hash, 
+                    rol, 
+                    estado, 
+                    usuario_creacion, 
+                    fecha_creacion,
+                    auth_provider
+                )
+                VALUES (%s, %s, %s, %s, %s, 'Activo', 'registro_publico', NOW(), 'local')
                 RETURNING id_usuario, nombre, username, email, rol
-            """, [nombre, username, email, hashed_password.decode('utf-8'), 'usuario'])
+            """, [nombre, username, email, hashed_password.decode('utf-8'), rol])
             
             user_data = cursor.fetchone()
             conn.commit()
             
-            # Generar token automáticamente
+            # Generar token automáticamente - CORREGIDO: enviar los campos correctos
             token = generate_token({
                 "id_usuario": user_data[0],
                 "username": user_data[2],
                 "nombre": user_data[1],
                 "rol": user_data[4],
-                "grupo": ""
+                "grupo": ""  # campo requerido por generate_token pero no existe en BD
             })
             
-            logger.info("Registro exitoso: %s desde %s", username, ip)
+            logger.info("Registro exitoso: %s desde %s con rol %s", username, ip, rol)
             registrar_auditoria(
                 accion="registro",
                 recurso="auth",
                 exitoso=True,
                 codigo_respuesta=201,
-                detalle={"username": username, "email": email},
+                detalle={"username": username, "email": email, "rol": rol},
             )
             
             return jsonify({
@@ -531,8 +546,7 @@ def api_register():
             
     except Exception as e:
         logger.error(f"Error en registro: {e}", exc_info=True)
-        return jsonify({"error": "Error al registrar usuario"}), 500
-
+        return jsonify({"error": f"Error al registrar usuario: {str(e)}"}), 500
 # ── Main ──────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("=" * 60)
