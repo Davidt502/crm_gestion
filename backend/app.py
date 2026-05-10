@@ -237,7 +237,7 @@ def api_login():
 @token_required
 def api_verify():
     """Verifica que el token JWT actual sea válido y retorna el usuario."""
-    user = getattr(request, "current_user", {})
+    user = getattr(g, "current_user", {}) or {}
     return jsonify({
         "valid": True,
         "user": {
@@ -490,8 +490,8 @@ def api_register():
             
             # Insertar nuevo usuario (por defecto rol='usuario', no admin)
             cursor.execute("""
-                INSERT INTO usuarios (nombre, username, email, password_hash, rol, activo, fecha_creacion)
-                VALUES (%s, %s, %s, %s, %s, true, NOW())
+                INSERT INTO usuarios (nombre, username, email, password_hash, rol, estado, usuario_creacion, fecha_creacion)
+                VALUES (%s, %s, %s, %s, %s, 'Activo', 'registro_publico', NOW())
                 RETURNING id_usuario, nombre, username, email, rol
             """, [nombre, username, email, hashed_password.decode('utf-8'), 'usuario'])
             
@@ -537,8 +537,8 @@ def api_register():
 if __name__ == "__main__":
     print("=" * 60)
     print("  CRM Ing Software - API Backend")
-    print("  Servidor corriendo en: http://localhost:5000")
+    print("  Servidor corriendo en: http://crm-gestion.onrender.com")
     print("  DEBUG:", DEBUG)
     print("=" * 60)
     app.run(debug=DEBUG, host="0.0.0.0", port=5000)
-
+    
