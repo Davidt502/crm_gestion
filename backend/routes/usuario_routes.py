@@ -12,6 +12,7 @@ Endpoints:
 """
 import logging
 import bcrypt
+import re
 from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import token_required, get_usuario
 from database import db_connection_dict, to_int, ejecutar_funcion
@@ -20,15 +21,10 @@ logger = logging.getLogger(__name__)
 
 usuario_bp = Blueprint("usuarios", __name__, url_prefix="/api/usuarios")
 
-# Importar después de definir blueprint
-from middleware.auth_middleware import token_required
-
 _MAX_FIELD = 256
-_MIN_PASSWORD_LEN = 8  # Aumentado para mayor seguridad
+_MIN_PASSWORD_LEN = 8  # Mínimo 8 caracteres para seguridad
 _EMAIL_REGEX = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
 _USERNAME_REGEX = r"^[a-zA-Z0-9_-]{3,32}$"
-
-import re
 
 
 def _is_valid_email(email: str) -> bool:
@@ -50,7 +46,12 @@ def _sanitize(value, max_len=500) -> str:
 
 
 def _hash_password(plain: str) -> str:
-    return bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12)).decode("utf-8")
+    """Genera hash bcrypt con salt de 12 rondas"""
+    if not plain:
+        return ""
+    # IMPORTANTE: Asegurar que la contraseña no esté vacía
+    hashed = bcrypt.hashpw(plain.encode("utf-8"), bcrypt.gensalt(rounds=12))
+    return hashed.decode("utf-8")
 
 
 def _row_to_dict(row: dict) -> dict:
@@ -170,36 +171,50 @@ def crear_usuario():
     password = data.get("password", "")
     rol = _sanitize(data.get("rol", "usuario"), 30)
 
-    # Validaciones
+    # Validaciones mejoradas
     errors = []
-    if not nombre: errors.append("El nombre es obligatorio.")
-    if not username: errors.append("El nombre de usuario es obligatorio.")
-    if not password: errors.append("La contraseña es obligatoria.")
+    if not nombre: 
+        errors.append("El nombre es obligatorio.")
+    if not username: 
+        errors.append("El nombre de usuario es obligatorio.")
+    if not _is_valid_username(username):
+        errors.append("El nombre de usuario debe tener entre 3 y 32 caracteres (letras, números, - y _)")
+    if not password: 
+        errors.append("La contraseña es obligatoria.")
     elif len(password) < _MIN_PASSWORD_LEN:
         errors.append(f"La contraseña debe tener al menos {_MIN_PASSWORD_LEN} caracteres.")
     elif len(password) > _MAX_FIELD:
         errors.append("La contraseña es demasiado larga.")
+    if email and not _is_valid_email(email):
+        errors.append("El formato del correo electrónico no es válido.")
     if rol not in ("admin", "usuario"):
         errors.append("El rol debe ser 'admin' o 'usuario'.")
 
     if errors:
         return jsonify({"error": errors[0], "errores": errors}), 400
 
-    password_hash = _hash_password(password)
+    # Generar hash de la contraseña
+    try:
+        password_hash = _hash_password(password)
+        logger.info(f"Hash generado para usuario {username}: {password_hash[:30]}...")
+    except Exception as e:
+        logger.error(f"Error al generar hash: {e}")
+        return jsonify({"error": "Error interno al procesar la contraseña"}), 500
 
     try:
         row = ejecutar_funcion("sp_crear_usuario", nombre, email or None, username, password_hash, rol, get_usuario())
         
         if row:
-            if isinstance(row, dict):
-                id_usr = row.get('id_usuario_result')
-                mensaje = row.get('mensaje_result')
-            else:
-                id_usr = row[0] if len(row) > 0 else None
-                mensaje = row[1] if len(row) > 1 else "Usuario creado."
+            id_usr, mensaje, is_error = sp_result(row)  # Usar sp_result correctamente
             
-            if id_usr:
-                return jsonify({"id_usuario": id_usr, "mensaje": mensaje}), 201
+            if not is_error and id_usr:
+                return jsonify({
+                    "id_usuario": id_usr, 
+                    "mensaje": mensaje,
+                    "username": username
+                }), 201
+            else:
+                return jsonify({"error": mensaje or "Error al crear el usuario."}), 400
         
         return jsonify({"error": "Error al crear el usuario."}), 400
 
@@ -223,6 +238,8 @@ def actualizar_usuario(id):
 
     if not nombre:
         return jsonify({"error": "El nombre es obligatorio."}), 400
+    if email and not _is_valid_email(email):
+        return jsonify({"error": "El formato del correo electrónico no es válido."}), 400
     if rol and rol not in ("admin", "usuario"):
         return jsonify({"error": "El rol debe ser 'admin' o 'usuario'."}), 400
 
@@ -230,14 +247,9 @@ def actualizar_usuario(id):
         row = ejecutar_funcion("sp_actualizar_usuario", id, nombre, email or None, rol, get_usuario())
         
         if row:
-            if isinstance(row, dict):
-                id_usr = row.get('id_usuario_result')
-                mensaje = row.get('mensaje_result')
-            else:
-                id_usr = row[0] if len(row) > 0 else None
-                mensaje = row[1] if len(row) > 1 else "Usuario actualizado."
+            id_usr, mensaje, is_error = sp_result(row)
             
-            if id_usr:
+            if not is_error and id_usr:
                 return jsonify({"id_usuario": id_usr, "mensaje": mensaje})
         
         return jsonify({"error": "Error al actualizar el usuario."}), 400
@@ -264,20 +276,20 @@ def cambiar_password(id):
     if len(password) > _MAX_FIELD:
         return jsonify({"error": "La contraseña es demasiado larga."}), 400
 
-    password_hash = _hash_password(password)
+    try:
+        password_hash = _hash_password(password)
+        logger.info(f"Generando nuevo hash para usuario ID {id}")
+    except Exception as e:
+        logger.error(f"Error al generar hash: {e}")
+        return jsonify({"error": "Error interno al procesar la contraseña"}), 500
 
     try:
         row = ejecutar_funcion("sp_cambiar_password_usuario", id, password_hash, get_usuario())
         
         if row:
-            if isinstance(row, dict):
-                id_usr = row.get('id_usuario_result')
-                mensaje = row.get('mensaje_result')
-            else:
-                id_usr = row[0] if len(row) > 0 else None
-                mensaje = row[1] if len(row) > 1 else "Contraseña actualizada."
+            id_usr, mensaje, is_error = sp_result(row)
             
-            if id_usr:
+            if not is_error and id_usr:
                 return jsonify({"mensaje": mensaje})
         
         return jsonify({"error": "Error al cambiar la contraseña."}), 400
@@ -296,14 +308,9 @@ def desactivar_usuario(id):
         row = ejecutar_funcion("sp_desactivar_usuario", id, get_usuario())
         
         if row:
-            if isinstance(row, dict):
-                id_usr = row.get('id_usuario_result')
-                mensaje = row.get('mensaje_result')
-            else:
-                id_usr = row[0] if len(row) > 0 else None
-                mensaje = row[1] if len(row) > 1 else "Usuario desactivado."
+            id_usr, mensaje, is_error = sp_result(row)
             
-            if id_usr:
+            if not is_error and id_usr:
                 return jsonify({"mensaje": mensaje})
         
         return jsonify({"error": "Error al desactivar el usuario."}), 400
@@ -322,14 +329,9 @@ def reactivar_usuario(id):
         row = ejecutar_funcion("sp_reactivar_usuario", id, get_usuario())
         
         if row:
-            if isinstance(row, dict):
-                id_usr = row.get('id_usuario_result')
-                mensaje = row.get('mensaje_result')
-            else:
-                id_usr = row[0] if len(row) > 0 else None
-                mensaje = row[1] if len(row) > 1 else "Usuario reactivado."
+            id_usr, mensaje, is_error = sp_result(row)
             
-            if id_usr:
+            if not is_error and id_usr:
                 return jsonify({"mensaje": mensaje})
         
         return jsonify({"error": "Error al reactivar el usuario."}), 400
@@ -337,3 +339,30 @@ def reactivar_usuario(id):
     except Exception as exc:
         logger.error("reactivar_usuario: %s", exc, exc_info=True)
         return jsonify({"error": "Error interno al reactivar el usuario."}), 500
+
+
+# Función auxiliar para procesar resultados de SP
+def sp_result(row):
+    """
+    Procesa el resultado de un Stored Procedure
+    Retorna: (id, mensaje, is_error)
+    """
+    if row is None:
+        return None, "Sin respuesta del servidor", True
+    
+    if isinstance(row, dict):
+        id_val = (
+            row.get("id_usuario_result") or
+            row.get("id_cliente_result") or
+            row.get("id_proveedor_result") or
+            row.get("id_empleado_result") or
+            row.get("id_compra_result")
+        )
+        mensaje = row.get("mensaje_result", "")
+        is_error = row.get("is_error", False)
+    else:
+        id_val = row[0] if len(row) > 0 else None
+        mensaje = row[1] if len(row) > 1 else ""
+        is_error = row[2] if len(row) > 2 else False
+    
+    return to_int(id_val), mensaje, is_error
