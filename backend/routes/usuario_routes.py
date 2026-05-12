@@ -12,7 +12,7 @@ Endpoints:
 """
 import logging
 import bcrypt
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
 from middleware.auth_middleware import token_required, get_usuario
 from database import db_connection_dict, to_int, ejecutar_funcion
 
