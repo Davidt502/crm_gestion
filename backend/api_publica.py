@@ -1,9 +1,9 @@
 """
 api_publica.py - Portal de API pública con control total de admin
 """
-import secrets, json, logging, smtplib, os, time
+import secrets, json, logging, smtplib, os, time, jwt
 from functools import wraps
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from flask import Blueprint, request, jsonify, g
@@ -22,7 +22,21 @@ SMTP_PASS     = os.getenv("SMTP_PASS", "")
 ADMIN_EMAIL   = os.getenv("ADMIN_EMAIL", "")
 FRONTEND_URL  = os.getenv("FRONTEND_URL", "https://crm-frontend-reg9.onrender.com")
 BACKEND_URL   = os.getenv("BACKEND_URL", "https://crm-gestion.onrender.com")
+JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'tu-secret-key-cambia-esto')
 
+# ── Configuración CORS ────────────────────────────────────────
+@api_publica_bp.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-API-Token'
+    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, PATCH, OPTIONS'
+    return response
+
+@api_publica_bp.route('/api/admin/<path:path>', methods=['OPTIONS'])
+@api_publica_bp.route('/api/admin', methods=['OPTIONS'])
+@api_publica_bp.route('/api/portal/<path:path>', methods=['OPTIONS'])
+def handle_options(path=None):
+    return '', 200
 
 # ── Helpers ───────────────────────────────────────────────────
 def _get_ip():
@@ -82,6 +96,49 @@ def _crear_alerta(tipo, descripcion, ip=None, id_token=None, correo=None):
     except Exception as exc:
         logger.error("Error alerta: %s", exc)
 
+def _solo_admin():
+    """Verifica si el usuario actual es administrador"""
+    user = getattr(g, "current_user", None)
+    
+    if not user:
+        return False, ""
+    
+    # Si user es un diccionario
+    if isinstance(user, dict):
+        username = user.get("username", "")
+        rol = user.get("rol", "")
+        if rol == "admin":
+            return True, username
+        
+        # Verificar en BD
+        try:
+            with db_connection() as (conn, cursor):
+                cursor.execute(
+                    "SELECT rol, username FROM usuarios WHERE username = %s AND activo = TRUE",
+                    [username]
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row[0] == "admin", row[1]
+        except Exception as exc:
+            logger.error("_solo_admin DB lookup: %s", exc)
+        return False, username
+    
+    # Si user es un objeto
+    username = getattr(user, "username", "")
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute(
+                "SELECT rol FROM usuarios WHERE username = %s AND activo = TRUE",
+                [username]
+            )
+            row = cursor.fetchone()
+            if row:
+                return row[0] == "admin", username
+    except Exception as exc:
+        logger.error("_solo_admin DB lookup: %s", exc)
+    
+    return False, username
 
 # ── Validar token público ──────────────────────────────────────
 def validar_token_publico(token_str):
@@ -151,7 +208,6 @@ def validar_token_publico(token_str):
         logger.error("validar_token: %s", exc, exc_info=True)
         return None, "Error interno."
 
-
 # ── Decorator token público ────────────────────────────────────
 def token_publico_required(f):
     @wraps(f)
@@ -196,9 +252,8 @@ def token_publico_required(f):
         return resp
     return decorated
 
-
 # ══════════════════════════════════════════════════════════════
-# NUEVAS RUTAS: Autenticación para usuarios portal
+# RUTAS: Autenticación para usuarios portal
 # ══════════════════════════════════════════════════════════════
 
 @api_publica_bp.route("/api/portal/auth/login", methods=["POST"])
@@ -218,9 +273,9 @@ def portal_login():
         with db_connection() as (conn, cursor):
             cursor.execute("""
                 SELECT u.id_usuario, u.username, u.password_hash, u.nombre, u.activo,
-                       u.rol, up.id_portal_usuario, up.endpoints_permitidos, up.max_requests_dia
+                       u.rol, up.endpoints_permitidos, up.max_requests_dia
                 FROM usuarios u
-                JOIN portal_usuarios up ON u.id_usuario = up.id_usuario
+                LEFT JOIN portal_usuarios up ON u.id_usuario = up.id_usuario
                 WHERE u.username = %s AND u.activo = TRUE
             """, [username])
             row = cursor.fetchone()
@@ -228,17 +283,18 @@ def portal_login():
             if not row or not check_password_hash(row[2], password):
                 return jsonify({"error": "Credenciales inválidas"}), 401
             
-            id_usuario, username_db, password_hash, nombre, activo, rol, id_portal, endpoints, max_req = row
+            id_usuario, username_db, password_hash, nombre, activo, rol, endpoints, max_req = row
             
             # Generar token JWT específico para portal
-            import jwt
             token = jwt.encode({
                 'id_usuario': id_usuario,
                 'username': username,
                 'rol': 'portal',
-                'id_portal': id_portal,
-                'exp': datetime.utcnow() + datetime.timedelta(days=7)
-            }, os.getenv('JWT_SECRET_KEY', 'tu-secret-key-cambia-esto'), algorithm='HS256')
+                'exp': datetime.utcnow() + timedelta(days=7)
+            }, JWT_SECRET_KEY, algorithm='HS256')
+            
+            # Actualizar último acceso
+            cursor.execute("UPDATE portal_usuarios SET ultimo_acceso = NOW() WHERE id_usuario = %s", [id_usuario])
             
             return jsonify({
                 "success": True,
@@ -249,7 +305,7 @@ def portal_login():
                     "nombre": nombre,
                     "rol": "portal",
                     "endpoints_permitidos": json.loads(endpoints) if endpoints else [],
-                    "max_requests_dia": max_req
+                    "max_requests_dia": max_req or 500
                 }
             })
     except Exception as exc:
@@ -267,8 +323,7 @@ def portal_token_required(f):
             return jsonify({"error": "Token requerido"}), 401
         
         try:
-            import jwt
-            payload = jwt.decode(token, os.getenv('JWT_SECRET_KEY', 'tu-secret-key-cambia-esto'), algorithms=['HS256'])
+            payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=['HS256'])
             if payload.get('rol') != 'portal':
                 return jsonify({"error": "Acceso no autorizado"}), 403
             
@@ -280,9 +335,8 @@ def portal_token_required(f):
             return jsonify({"error": "Token inválido"}), 401
     return decorated
 
-
 # ══════════════════════════════════════════════════════════════
-# NUEVAS RUTAS: Gestión de usuarios portal (Admin)
+# RUTAS: Gestión de usuarios portal (Admin)
 # ══════════════════════════════════════════════════════════════
 
 @api_publica_bp.route("/api/admin/portal/usuarios", methods=["GET"])
@@ -296,31 +350,43 @@ def listar_usuarios_portal():
     try:
         with db_connection() as (conn, cursor):
             cursor.execute("""
-                SELECT u.id_usuario, u.username, u.nombre, u.email, u.activo,
-                       u.fecha_creacion, up.endpoints_permitidos, up.max_requests_dia,
-                       up.ultimo_acceso, COALESCE(up.total_requests, 0) as total_requests
+                SELECT 
+                    u.id_usuario, 
+                    u.username, 
+                    u.nombre, 
+                    u.email, 
+                    u.activo,
+                    u.fecha_creacion,
+                    COALESCE(up.endpoints_permitidos, '[]') as endpoints_permitidos,
+                    COALESCE(up.max_requests_dia, 500) as max_requests_dia,
+                    COALESCE(up.ultimo_acceso, NULL) as ultimo_acceso,
+                    COALESCE(up.total_requests, 0) as total_requests
                 FROM usuarios u
-                JOIN portal_usuarios up ON u.id_usuario = up.id_usuario
+                LEFT JOIN portal_usuarios up ON u.id_usuario = up.id_usuario
+                WHERE u.rol = 'portal'
                 ORDER BY u.fecha_creacion DESC
             """)
-            cols = [d[0] for d in cursor.description]
+            
+            columns = [desc[0] for desc in cursor.description]
             rows = []
-            for r in cursor.fetchall():
-                row_dict = dict(zip(cols, r))
-                if row_dict.get('endpoints_permitidos'):
+            for row in cursor.fetchall():
+                user_dict = dict(zip(columns, row))
+                # Convertir JSON string a lista
+                if user_dict.get('endpoints_permitidos'):
                     try:
-                        row_dict['endpoints_permitidos'] = json.loads(row_dict['endpoints_permitidos'])
+                        user_dict['endpoints_permitidos'] = json.loads(user_dict['endpoints_permitidos'])
                     except:
-                        pass
-                if row_dict.get('fecha_creacion'):
-                    row_dict['fecha_creacion'] = str(row_dict['fecha_creacion'])
-                if row_dict.get('ultimo_acceso'):
-                    row_dict['ultimo_acceso'] = str(row_dict['ultimo_acceso'])
-                rows.append(row_dict)
-        return jsonify({"usuarios": rows})
+                        user_dict['endpoints_permitidos'] = []
+                # Convertir fechas a string
+                for field in ['fecha_creacion', 'ultimo_acceso']:
+                    if user_dict.get(field):
+                        user_dict[field] = str(user_dict[field])
+                rows.append(user_dict)
+            
+            return jsonify({"usuarios": rows, "total": len(rows)})
     except Exception as exc:
         logger.error("listar_usuarios_portal: %s", exc, exc_info=True)
-        return jsonify({"error": "Error al listar usuarios"}), 500
+        return jsonify({"error": f"Error al listar usuarios: {str(exc)}"}), 500
 
 @api_publica_bp.route("/api/admin/portal/usuarios", methods=["POST"])
 @token_required
@@ -367,9 +433,9 @@ def crear_usuario_portal():
             
             # Crear entrada en portal_usuarios
             cursor.execute("""
-                INSERT INTO portal_usuarios (id_usuario, endpoints_permitidos, max_requests_dia)
-                VALUES (%s, %s, %s)
-            """, [id_usuario, json.dumps(endpoints), max_requests])
+                INSERT INTO portal_usuarios (id_usuario, endpoints_permitidos, max_requests_dia, creado_por)
+                VALUES (%s, %s, %s, %s)
+            """, [id_usuario, json.dumps(endpoints), max_requests, admin_user])
             
             # Enviar correo con credenciales
             if email:
@@ -420,32 +486,15 @@ def actualizar_usuario_portal(id_usuario):
     
     try:
         with db_connection() as (conn, cursor):
-            updates = []
-            params = []
-            
-            if "nombre" in data:
-                updates.append("nombre = %s")
-                params.append(data["nombre"])
-            if "email" in data:
-                updates.append("email = %s")
-                params.append(data["email"])
             if "activo" in data:
-                updates.append("activo = %s")
-                params.append(data["activo"])
+                cursor.execute("UPDATE usuarios SET activo = %s WHERE id_usuario = %s", 
+                              [data["activo"], id_usuario])
             if "max_requests_dia" in data:
                 cursor.execute("UPDATE portal_usuarios SET max_requests_dia = %s WHERE id_usuario = %s", 
                               [data["max_requests_dia"], id_usuario])
             if "endpoints_permitidos" in data:
                 cursor.execute("UPDATE portal_usuarios SET endpoints_permitidos = %s WHERE id_usuario = %s",
                               [json.dumps(data["endpoints_permitidos"]), id_usuario])
-            if "password" in data and data["password"]:
-                password_hash = generate_password_hash(data["password"])
-                updates.append("password_hash = %s")
-                params.append(password_hash)
-            
-            if updates:
-                params.append(id_usuario)
-                cursor.execute(f"UPDATE usuarios SET {', '.join(updates)} WHERE id_usuario = %s", params)
         
         return jsonify({"success": True, "mensaje": "Usuario actualizado"})
     except Exception as exc:
@@ -468,7 +517,6 @@ def eliminar_usuario_portal(id_usuario):
     except Exception as exc:
         logger.error("eliminar_usuario_portal: %s", exc, exc_info=True)
         return jsonify({"error": "Error al eliminar"}), 500
-
 
 # ══════════════════════════════════════════════════════════════
 # ENDPOINTS PÚBLICOS (sin auth interna)
@@ -556,7 +604,6 @@ def solicitar_acceso():
         logger.error("solicitar_acceso: %s", exc, exc_info=True)
         return jsonify({"error": "Error al enviar solicitud."}), 500
 
-
 @api_publica_bp.route("/api/portal/aprobar-link/<token_ver>", methods=["GET"])
 def aprobar_via_link(token_ver):
     """Aprobar solicitud desde enlace del correo."""
@@ -626,34 +673,9 @@ curl -H "X-API-Token: {nuevo_token[:20]}..." \\
         logger.error("resolver_via_link: %s", exc, exc_info=True)
         return jsonify({"error": "Error procesando enlace."}), 500
 
-
 # ══════════════════════════════════════════════════════════════
 # GESTIÓN ADMIN (requiere auth interna)
 # ══════════════════════════════════════════════════════════════
-
-def _solo_admin():
-    user = getattr(g, "current_user", {}) or {}
-    username = user.get("username", "")
-
-    if not username:
-        return False, ""
-
-    if "rol" in user:
-        return user["rol"] == "admin", username
-
-    try:
-        with db_connection() as (conn, cursor):
-            cursor.execute(
-                "SELECT rol FROM usuarios WHERE username = %s AND activo = TRUE",
-                [username]
-            )
-            row = cursor.fetchone()
-            if row:
-                return row[0] == "admin", username
-    except Exception as exc:
-        logger.error("_solo_admin DB lookup: %s", exc)
-
-    return False, username
 
 @api_publica_bp.route("/api/admin/solicitudes", methods=["GET"])
 @token_required
@@ -663,20 +685,17 @@ def listar_solicitudes():
     estado = request.args.get("estado")
     try:
         with db_connection() as (conn, cursor):
-            where  = "WHERE 1=1" + (" AND s.estado=%s" if estado else "")
+            where  = "WHERE 1=1" + (" AND estado=%s" if estado else "")
             params = [estado] if estado else []
             cursor.execute(f"""
-                SELECT s.id_solicitud, s.nombre, s.correo, s.telefono,
-                       s.empresa  AS carnet,
-                       s.cargo    AS numero_grupo,
-                       s.motivo   AS apis_solicitadas,
-                       s.estado, s.ip_solicitud, s.user_agent,
-                       s.fecha_solicitud, s.aprobado_por, s.fecha_resolucion, s.notas_admin,
-                       t.nombre_token, t.activo AS token_activo, t.puede_leer, t.puede_escribir,
-                       t.total_usos, t.id_token
-                FROM api_solicitudes s
-                LEFT JOIN api_tokens t ON s.id_solicitud=t.id_solicitud
-                {where} ORDER BY s.fecha_solicitud DESC
+                SELECT id_solicitud, nombre, correo, telefono,
+                       empresa  AS carnet,
+                       cargo    AS numero_grupo,
+                       motivo   AS apis_solicitadas,
+                       estado, ip_solicitud, user_agent,
+                       fecha_solicitud, aprobado_por, fecha_resolucion, notas_admin
+                FROM api_solicitudes
+                {where} ORDER BY fecha_solicitud DESC
             """, params)
             cols = [d[0] for d in cursor.description]
             rows = [dict(zip(cols,r)) for r in cursor.fetchall()]
@@ -687,7 +706,6 @@ def listar_solicitudes():
     except Exception as exc:
         logger.error("listar_solicitudes: %s", exc, exc_info=True)
         return jsonify({"error": "Error."}), 500
-
 
 @api_publica_bp.route("/api/admin/solicitudes/<int:id_sol>/aprobar", methods=["POST"])
 @token_required
@@ -723,15 +741,15 @@ def aprobar_solicitud(id_sol):
             cursor.execute("""
                 INSERT INTO api_tokens
                     (nombre_token,token,descripcion,id_usuario,endpoints_permitidos,
-                     solo_lectura,puede_leer,puede_escribir,activo,expira_en,
+                     puede_leer,puede_escribir,activo,expira_en,
                      max_requests_dia,usuario_creacion,id_solicitud)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,TRUE,%s,%s,%s,%s)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,TRUE,%s,%s,%s,%s)
                 RETURNING id_token
             """, [
                 f"Token - {nombre}", nuevo_token,
                 f"Acceso para {nombre} ({empresa or correo})",
                 id_admin, json.dumps(endpoints),
-                not puede_escribir, puede_leer, puede_escribir,
+                puede_leer, puede_escribir,
                 expira_en, max_req, admin_user, id_sol
             ])
             id_token = cursor.fetchone()[0]
@@ -771,7 +789,6 @@ curl -H "X-API-Token: TU_TOKEN" \\
         logger.error("aprobar_solicitud: %s", exc, exc_info=True)
         return jsonify({"error": "Error al aprobar."}), 500
 
-
 @api_publica_bp.route("/api/admin/solicitudes/<int:id_sol>/rechazar", methods=["POST"])
 @token_required
 def rechazar_solicitud(id_sol):
@@ -804,7 +821,6 @@ def rechazar_solicitud(id_sol):
         logger.error("rechazar_solicitud: %s", exc, exc_info=True)
         return jsonify({"error": "Error."}), 500
 
-
 @api_publica_bp.route("/api/admin/tokens", methods=["GET"])
 @token_required
 def listar_tokens():
@@ -835,7 +851,6 @@ def listar_tokens():
         logger.error("listar_tokens: %s", exc, exc_info=True)
         return jsonify({"error": "Error."}), 500
 
-
 @api_publica_bp.route("/api/admin/tokens/<int:id_token>/toggle", methods=["PATCH"])
 @token_required
 def toggle_token(id_token):
@@ -853,7 +868,6 @@ def toggle_token(id_token):
     except Exception as exc:
         logger.error("toggle_token: %s", exc, exc_info=True)
         return jsonify({"error": "Error."}), 500
-
 
 @api_publica_bp.route("/api/admin/logs", methods=["GET"])
 @token_required
@@ -888,7 +902,6 @@ def listar_logs():
     except Exception as exc:
         logger.error("listar_logs: %s", exc, exc_info=True)
         return jsonify({"error": "Error."}), 500
-
 
 @api_publica_bp.route("/api/admin/stats", methods=["GET"])
 @token_required
@@ -928,6 +941,71 @@ def stats_portal():
         logger.error("stats_portal: %s", exc, exc_info=True)
         return jsonify({"error": "Error."}), 500
 
+@api_publica_bp.route("/api/admin/ips-bloqueadas", methods=["GET"])
+@token_required
+def listar_ips_bloqueadas():
+    es_admin, _ = _solo_admin()
+    if not es_admin: return jsonify({"error": "Solo administradores."}), 403
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute("""
+                SELECT id_bloqueo, ip, motivo, activo, bloqueado_por, 
+                       fecha_bloqueo, fecha_desbloqueo
+                FROM api_ips_bloqueadas 
+                WHERE activo = TRUE
+                ORDER BY fecha_bloqueo DESC
+            """)
+            cols = [d[0] for d in cursor.description]
+            rows = [dict(zip(cols,r)) for r in cursor.fetchall()]
+            for r in rows:
+                for f in ("fecha_bloqueo","fecha_desbloqueo"):
+                    if r.get(f): r[f] = str(r[f])
+        return jsonify({"ips": rows, "total": len(rows)})
+    except Exception as exc:
+        logger.error("listar_ips_bloqueadas: %s", exc, exc_info=True)
+        return jsonify({"error": "Error."}), 500
+
+@api_publica_bp.route("/api/admin/ips-bloqueadas/<int:id_bloqueo>", methods=["DELETE"])
+@token_required
+def desbloquear_ip(id_bloqueo):
+    es_admin, _ = _solo_admin()
+    if not es_admin: return jsonify({"error": "Solo administradores."}), 403
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute("""
+                UPDATE api_ips_bloqueadas 
+                SET activo = FALSE, fecha_desbloqueo = NOW() 
+                WHERE id_bloqueo = %s
+            """, [id_bloqueo])
+        return jsonify({"success": True, "mensaje": "IP desbloqueada"})
+    except Exception as exc:
+        logger.error("desbloquear_ip: %s", exc, exc_info=True)
+        return jsonify({"error": "Error."}), 500
+
+@api_publica_bp.route("/api/admin/alertas", methods=["GET"])
+@token_required
+def listar_alertas():
+    es_admin, _ = _solo_admin()
+    if not es_admin: return jsonify({"error": "Solo administradores."}), 403
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute("""
+                SELECT id_alerta, tipo, descripcion, ip, id_token, 
+                       correo_usuario, resuelta, fecha_alerta, fecha_resolucion
+                FROM api_alertas 
+                WHERE resuelta = FALSE
+                ORDER BY fecha_alerta DESC
+                LIMIT 100
+            """)
+            cols = [d[0] for d in cursor.description]
+            rows = [dict(zip(cols,r)) for r in cursor.fetchall()]
+            for r in rows:
+                for f in ("fecha_alerta","fecha_resolucion"):
+                    if r.get(f): r[f] = str(r[f])
+        return jsonify({"alertas": rows, "total": len(rows)})
+    except Exception as exc:
+        logger.error("listar_alertas: %s", exc, exc_info=True)
+        return jsonify({"error": "Error."}), 500
 
 # ══════════════════════════════════════════════════════════════
 # ENDPOINTS PÚBLICOS CON TOKEN (datos del CRM)
