@@ -112,7 +112,7 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
         <input type="password" id="admin-password" placeholder="Tu contraseña">
       </div>
       
-   <button class="btn" onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;">🔓 Acceder como Admin</button>
+      <button class="btn" onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;">🔓 Acceder como Admin</button>
     </div>
   </div>
 </div>
@@ -207,7 +207,7 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
     <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Email</th><th>APIs Permitidas</th><th>Límite Diario</th><th>Estado</th><th>Acciones</th></tr>
+          <tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Email</th><th>APIs Permitidas</th><th>Límite Diario</th><th>Acciones</th></tr>
         </thead>
         <tbody id="tabla-usuarios-portal"></tbody>
       </table>
@@ -381,7 +381,13 @@ function headers() {
 
 async function apiFetch(url, opts = {}) {
   const res = await fetch(CONFIG.API_BASE_URL + url, { ...opts, headers: { ...headers(), ...(opts.headers || {}) } });
-  return [res, await res.json()];
+  let data = {};
+  try {
+    data = await res.json();
+  } catch(e) {
+    data = { error: 'Error al parsear respuesta' };
+  }
+  return [res, data];
 }
 
 // Verificar autenticación de administrador
@@ -547,7 +553,7 @@ function resetCrear() {
   btn.disabled = false; btn.textContent = '✅ Crear usuario y generar token';
 }
 
-// ── Usuarios Portal (acceso con login) ───────────────────────
+// ── Usuarios Portal ──────────────────────────────────────────
 async function loadUsuariosPortal() {
   try {
     const [res, data] = await apiFetch('/api/admin/portal/usuarios');
@@ -557,7 +563,7 @@ async function loadUsuariosPortal() {
     }
     const tb = document.getElementById('tabla-usuarios-portal');
     if (!data.usuarios || !data.usuarios.length) {
-      tb.innerHTML = '<tr><td colspan="8" class="empty">No hay usuarios portal</td></tr>';
+      tb.innerHTML = '<tr><td colspan="7" class="empty">No hay usuarios portal</td></tr>';
       return;
     }
     tb.innerHTML = data.usuarios.map(u => `
@@ -568,9 +574,7 @@ async function loadUsuariosPortal() {
         <td style="font-size:12px">${escapeHtml(u.email || '—')}</td>
         <td style="font-size:10px;max-width:180px;">${(u.endpoints_permitidos || []).map(e => e.split('/').pop()).join('<br>')}</td>
         <td>${u.max_requests_dia || 500}</td>
-        <td><span class="badge ${u.activo ? 'aprobado' : 'rechazado'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td>
-          <button class="btn btn-ghost" onclick="toggleUsuarioPortal(${u.id_usuario}, ${!u.activo})" style="padding:4px 8px;font-size:10px;">${u.activo ? '⏸ Desactivar' : '▶ Activar'}</button>
           <button class="btn btn-red" onclick="eliminarUsuarioPortal(${u.id_usuario})" style="padding:4px 8px;font-size:10px;">🗑 Eliminar</button>
         </td>
       </tr>
@@ -652,73 +656,67 @@ async function crearUsuarioPortal() {
   }
 }
 
-async function toggleUsuarioPortal(id, activar) {
-  const [res] = await apiFetch(`/api/admin/portal/usuarios/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify({ activo: activar })
-  });
-  if (res.ok) {
-    toast('Estado actualizado', 'success');
-    loadUsuariosPortal();
-  } else {
-    toast('Error al actualizar', 'error');
-  }
-}
-
 async function eliminarUsuarioPortal(id) {
-  if (!confirm('¿Desactivar este usuario? (No se eliminará permanentemente)')) return;
+  if (!confirm('¿Eliminar este usuario?')) return;
   const [res] = await apiFetch(`/api/admin/portal/usuarios/${id}`, { method: 'DELETE' });
   if (res.ok) {
-    toast('Usuario desactivado', 'success');
+    toast('Usuario eliminado', 'success');
     loadUsuariosPortal();
     loadStats();
   } else {
-    toast('Error al desactivar', 'error');
+    toast('Error al eliminar', 'error');
   }
 }
 
 // ── Dashboard y Stats ────────────────────────────────────────
 async function loadStats() {
-  const [, d] = await apiFetch('/api/admin/stats');
-  document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card"><div class="label">Solicitudes</div><div class="value accent">${d.total_solicitudes || 0}</div></div>
-    <div class="stat-card"><div class="label">Pendientes</div><div class="value yellow">${d.pendientes || 0}</div></div>
-    <div class="stat-card"><div class="label">Tokens API</div><div class="value green">${d.tokens_activos || 0}</div></div>
-    <div class="stat-card"><div class="label">Usuarios Portal</div><div class="value accent">${d.usuarios_portal || 0}</div></div>
-    <div class="stat-card"><div class="label">Llamadas 24h</div><div class="value accent">${d.llamadas_24h || 0}</div></div>
-    <div class="stat-card"><div class="label">IPs bloqueadas</div><div class="value red">${d.ips_bloqueadas || 0}</div></div>`;
-  
-  document.getElementById('badge-pendientes').textContent = d.pendientes || 0;
-  
-  const top = document.getElementById('top-endpoints');
-  if (d.top_endpoints && d.top_endpoints.length) {
-    top.innerHTML = d.top_endpoints.map(e => `<tr><td class="mono">${e.endpoint}</td><td>${e.total}</td></tr>`).join('');
-  } else {
-    top.innerHTML = '<tr><td colspan="2" class="empty">Sin datos</td></tr>';
+  try {
+    const [, d] = await apiFetch('/api/admin/stats');
+    document.getElementById('stats-grid').innerHTML = `
+      <div class="stat-card"><div class="label">Solicitudes</div><div class="value accent">${d.total_solicitudes || 0}</div></div>
+      <div class="stat-card"><div class="label">Pendientes</div><div class="value yellow">${d.pendientes || 0}</div></div>
+      <div class="stat-card"><div class="label">Tokens API</div><div class="value green">${d.tokens_activos || 0}</div></div>
+      <div class="stat-card"><div class="label">Usuarios Portal</div><div class="value accent">${d.usuarios_portal || 0}</div></div>
+    `;
+    
+    document.getElementById('badge-pendientes').textContent = d.pendientes || 0;
+    
+    const top = document.getElementById('top-endpoints');
+    if (d.top_endpoints && d.top_endpoints.length) {
+      top.innerHTML = d.top_endpoints.map(e => `<tr><td class="mono">${e.endpoint}</td><td>${e.total}</td></tr>`).join('');
+    } else {
+      top.innerHTML = '<tr><td colspan="2" class="empty">Sin datos</td></tr>';
+    }
+  } catch(e) {
+    console.error('Error loading stats:', e);
   }
 }
 
 // ── Solicitudes ──────────────────────────────────────────────
 async function loadSolicitudes() {
-  const url = solFiltro ? `/api/admin/solicitudes?estado=${solFiltro}` : '/api/admin/solicitudes';
-  const [, d] = await apiFetch(url);
-  const list = d.solicitudes || [];
-  const tb = document.getElementById('tabla-solicitudes');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Sin solicitudes</td></tr>'; return; }
-  tb.innerHTML = list.map(s => `
-    <tr>
-      <td>${s.id_solicitud}</td>
-      <td><strong>${escapeHtml(s.nombre)}</strong></td>
-      <td style="font-family:monospace;font-size:12px">${escapeHtml(s.carnet || '—')}</td>
-      <td style="font-size:12px">${escapeHtml(s.correo)}</td>
-      <td>${escapeHtml(s.numero_grupo || '—')}</td>
-      <td style="font-size:11px;max-width:160px;word-break:break-word">${escapeHtml(s.apis_solicitadas || '—')}</td>
-      <td style="font-size:12px">${s.fecha_solicitud ? new Date(s.fecha_solicitud).toLocaleDateString() : '—'}</td>
-      <td><span class="badge ${s.estado.toLowerCase()}">${s.estado}</span></td>
-      <td>${s.estado === 'Pendiente' ? `<button class="btn btn-green" onclick="abrirAprobar(${s.id_solicitud})">✅ Aprobar</button>
-        <button class="btn btn-red" onclick="abrirRechazar(${s.id_solicitud})">❌ Rechazar</button>` : '—'}</td>
-    </tr>
-  `).join('');
+  try {
+    const url = solFiltro ? `/api/admin/solicitudes?estado=${solFiltro}` : '/api/admin/solicitudes';
+    const [, d] = await apiFetch(url);
+    const list = d.solicitudes || [];
+    const tb = document.getElementById('tabla-solicitudes');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Sin solicitudes</td></tr>'; return; }
+    tb.innerHTML = list.map(s => `
+      <tr>
+        <td>${s.id_solicitud}</td>
+        <td><strong>${escapeHtml(s.nombre)}</strong></td>
+        <td style="font-family:monospace;font-size:12px">${escapeHtml(s.empresa || '—')}</td>
+        <td style="font-size:12px">${escapeHtml(s.correo)}</td>
+        <td>${escapeHtml(s.cargo || '—')}</td>
+        <td style="font-size:11px;max-width:160px;word-break:break-word">${escapeHtml(s.motivo || '—')}</td>
+        <td style="font-size:12px">${s.fecha_solicitud ? new Date(s.fecha_solicitud).toLocaleDateString() : '—'}</td>
+        <td><span class="badge ${s.estado ? s.estado.toLowerCase() : 'pendiente'}">${s.estado || 'Pendiente'}</span></td>
+        <td>${s.estado === 'Pendiente' ? `<button class="btn btn-green" onclick="abrirAprobar(${s.id_solicitud})">✅ Aprobar</button>
+          <button class="btn btn-red" onclick="abrirRechazar(${s.id_solicitud})">❌ Rechazar</button>` : '—'}</td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading solicitudes:', e);
+  }
 }
 
 function filtrarSol(btn, estado) {
@@ -735,88 +733,119 @@ function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m =>
 async function confirmarAprobacion() {
   if (!solActual) return;
   const body = { puede_leer: true, puede_escribir: document.getElementById('perm-escribir').checked, max_requests_dia: parseInt(document.getElementById('max-req').value) };
-  await apiFetch(`/api/admin/solicitudes/${solActual}/aprobar`, { method: 'POST', body: JSON.stringify(body) });
-  closeModal(); loadSolicitudes(); loadStats(); toast('Solicitud aprobada', 'success');
+  const [res] = await apiFetch(`/api/admin/solicitudes/${solActual}/aprobar`, { method: 'POST', body: JSON.stringify(body) });
+  closeModal(); loadSolicitudes(); loadStats(); 
+  if (res.ok) toast('Solicitud aprobada', 'success');
+  else toast('Error al aprobar', 'error');
 }
 
 async function confirmarRechazo() {
   if (!solActual) return;
   const notas = document.getElementById('notas-rechazar').value;
-  await apiFetch(`/api/admin/solicitudes/${solActual}/rechazar`, { method: 'POST', body: JSON.stringify({ notas }) });
-  closeModal(); loadSolicitudes(); loadStats(); toast('Solicitud rechazada', 'success');
+  const [res] = await apiFetch(`/api/admin/solicitudes/${solActual}/rechazar`, { method: 'POST', body: JSON.stringify({ notas }) });
+  closeModal(); loadSolicitudes(); loadStats();
+  if (res.ok) toast('Solicitud rechazada', 'success');
+  else toast('Error al rechazar', 'error');
 }
 
 // ── Tokens API ───────────────────────────────────────────────
 async function loadTokens() {
-  const [, d] = await apiFetch('/api/admin/tokens');
-  const list = d.tokens || [];
-  const tb = document.getElementById('tabla-tokens');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin tokens</td></tr>'; return; }
-  tb.innerHTML = list.map(t => `
-    <tr>
-      <td>${escapeHtml(t.nombre_token)}</td>
-      <td style="font-family:monospace;font-size:12px">${escapeHtml(t.carnet || '—')}</td>
-      <td style="font-size:12px">${escapeHtml(t.correo || '—')}</td>
-      <td>${escapeHtml(t.numero_grupo || '—')}</td>
-      <td style="font-size:11px;max-width:150px;word-break:break-word">${escapeHtml(t.apis_solicitadas || '—')}</td>
-      <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
-      <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
-    </tr>
-  `).join('');
+  try {
+    const [, d] = await apiFetch('/api/admin/tokens');
+    const list = d.tokens || [];
+    const tb = document.getElementById('tabla-tokens');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin tokens</td></tr>'; return; }
+    tb.innerHTML = list.map(t => `
+      <tr>
+        <td>${escapeHtml(t.nombre_token)}</td>
+        <td style="font-family:monospace;font-size:12px">${escapeHtml(t.carnet || '—')}</td>
+        <td style="font-size:12px">${escapeHtml(t.correo_solicitante || '—')}</td>
+        <td>${escapeHtml(t.numero_grupo || '—')}</td>
+        <td style="font-size:11px;max-width:150px;word-break:break-word">${escapeHtml(t.apis_solicitadas || '—')}</td>
+        <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
+        <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
+        <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading tokens:', e);
+  }
 }
 
 async function toggleToken(id) {
-  await apiFetch(`/api/admin/tokens/${id}/toggle`, { method: 'PATCH' });
-  loadTokens();
+  const [res] = await apiFetch(`/api/admin/tokens/${id}/toggle`, { method: 'PATCH' });
+  if (res.ok) {
+    toast('Token actualizado', 'success');
+    loadTokens();
+  } else {
+    toast('Error al actualizar', 'error');
+  }
 }
 
 // ── Logs ─────────────────────────────────────────────────────
 async function loadLogs() {
-  const [, d] = await apiFetch('/api/admin/logs?page=1');
-  const list = d.logs || [];
-  const tb = document.getElementById('tabla-logs');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin logs</td></tr>'; return; }
-  tb.innerHTML = list.map(l => `
-    <tr>
-      <td style="font-size:11px">${l.fecha_uso ? new Date(l.fecha_uso).toLocaleString() : '—'}</td>
-      <td>${escapeHtml(l.nombre_usuario || '—')}</td>
-      <td><span class="badge aprobado">${l.metodo}</span></td>
-      <td class="mono" style="font-size:12px">${l.endpoint}</td>
-      <td class="mono" style="font-size:11px">${l.ip_publica || '—'}</td>
-      <td style="color:${l.exitoso ? 'var(--green)' : 'var(--red)'}">${l.codigo_respuesta}</td>
-    </tr>
-  `).join('');
+  try {
+    const [, d] = await apiFetch('/api/admin/logs?page=1');
+    const list = d.logs || [];
+    const tb = document.getElementById('tabla-logs');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin logs</td></tr>'; return; }
+    tb.innerHTML = list.map(l => `
+      <tr>
+        <td style="font-size:11px">${l.fecha_uso ? new Date(l.fecha_uso).toLocaleString() : '—'}</td>
+        <td>${escapeHtml(l.nombre_usuario || '—')}</td>
+        <td><span class="badge aprobado">${l.metodo || 'GET'}</span></td>
+        <td class="mono" style="font-size:12px">${l.endpoint || '—'}</td>
+        <td class="mono" style="font-size:11px">${l.ip_publica || '—'}</td>
+        <td style="color:${l.codigo_respuesta && l.codigo_respuesta < 400 ? 'var(--green)' : 'var(--red)'}">${l.codigo_respuesta || '—'}</td>
+      </table>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading logs:', e);
+  }
 }
 
 // ── IPs Bloqueadas ───────────────────────────────────────────
 async function loadIPs() {
-  const [, d] = await apiFetch('/api/admin/ips-bloqueadas');
-  const list = d.ips || [];
-  const tb = document.getElementById('tabla-ips');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
-  tb.innerHTML = list.filter(i => i.activo).map(i => `
-    <tr><td class="mono">${i.ip}</td><td>${escapeHtml(i.motivo)}</td><td>${i.fecha_bloqueo ? new Date(i.fecha_bloqueo).toLocaleDateString() : '—'}</td>
-    <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">Desbloquear</button></td></tr>
-  `).join('');
+  try {
+    const [, d] = await apiFetch('/api/admin/ips-bloqueadas');
+    const list = d.ips || [];
+    const tb = document.getElementById('tabla-ips');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
+    tb.innerHTML = list.map(i => `
+      <tr><td class="mono">${i.ip}</td><td>${escapeHtml(i.motivo)}</td><td>${i.fecha_bloqueo ? new Date(i.fecha_bloqueo).toLocaleDateString() : '—'}</td>
+      <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">Desbloquear</button></td>
+    </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading IPs:', e);
+  }
 }
 
 async function desbloquearIP(id) {
-  await apiFetch(`/api/admin/ips-bloqueadas/${id}`, { method: 'DELETE' });
-  loadIPs();
-  toast('IP desbloqueada', 'success');
+  const [res] = await apiFetch(`/api/admin/ips-bloqueadas/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    loadIPs();
+    toast('IP desbloqueada', 'success');
+  } else {
+    toast('Error al desbloquear', 'error');
+  }
 }
 
 // ── Alertas ──────────────────────────────────────────────────
 async function loadAlertas() {
-  const [, d] = await apiFetch('/api/admin/alertas');
-  const list = d.alertas || [];
-  const tb = document.getElementById('tabla-alertas');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Sin alertas</td></tr>'; return; }
-  tb.innerHTML = list.map(a => `
-    <tr><td><span class="badge pendiente">${escapeHtml(a.tipo)}</span></td><td>${escapeHtml(a.descripcion)}</td>
-    <td style="font-size:12px">${a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleString() : '—'}</td></tr>
-  `).join('');
+  try {
+    const [, d] = await apiFetch('/api/admin/alertas');
+    const list = d.alertas || [];
+    const tb = document.getElementById('tabla-alertas');
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Sin alertas</td></tr>'; return; }
+    tb.innerHTML = list.map(a => `
+      <tr><td><span class="badge pendiente">${escapeHtml(a.tipo)}</span></td><td>${escapeHtml(a.descripcion)}</td>
+      <td style="font-size:12px">${a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleString() : '—'}</td>
+    </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading alertas:', e);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {

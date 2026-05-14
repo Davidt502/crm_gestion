@@ -511,17 +511,17 @@ def _resolver_via_link(token_ver, accion):
                 id_admin = cursor.fetchone()[0]
                 cursor.execute("""
                     INSERT INTO api_tokens
-                        (nombre_token, token, id_usuario, puede_leer, puede_escribir,
-                         activo, usuario_creacion, id_solicitud, max_requests_dia)
-                    VALUES (%s, %s, %s, TRUE, FALSE, TRUE, 'admin_link', %s, 1000)
+                        (nombre_token, token, id_usuario, solo_lectura,
+                         activo, usuario_creacion, max_requests_dia)
+                    VALUES (%s, %s, %s, TRUE, TRUE, 'admin_link', 1000)
                     RETURNING id_token
-                """, [f"Token - {nombre}", nuevo_token, id_admin, id_sol])
+                """, [f"Token - {nombre}", nuevo_token, id_admin])
                 id_token = cursor.fetchone()[0]
                 cursor.execute("""
-                    UPDATE api_solicitudes SET estado='Aprobado', id_token=%s,
+                    UPDATE api_solicitudes SET estado='Aprobado',
                         aprobado_por='admin_link', fecha_resolucion=NOW()
                     WHERE id_solicitud=%s
-                """, [id_token, id_sol])
+                """, [id_sol])
                 
                 if correo:
                     html = f"""
@@ -628,22 +628,20 @@ def aprobar_solicitud(id_sol):
             cursor.execute("""
                 INSERT INTO api_tokens
                     (nombre_token, token, id_usuario, endpoints_permitidos,
-                     puede_leer, puede_escribir, activo, max_requests_dia, 
-                     usuario_creacion, id_solicitud)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     solo_lectura, activo, max_requests_dia, usuario_creacion)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id_token
             """, [
                 f"Token - {nombre}", nuevo_token, id_admin, json.dumps(endpoints),
-                True, puede_escribir, True, max_req, admin_user, id_sol
+                not puede_escribir, True, max_req, admin_user
             ])
             id_token = cursor.fetchone()[0]
 
             cursor.execute("""
                 UPDATE api_solicitudes 
-                SET estado='Aprobado', id_token=%s, aprobado_por=%s, 
-                    fecha_resolucion=NOW()
+                SET estado='Aprobado', aprobado_por=%s, fecha_resolucion=NOW()
                 WHERE id_solicitud=%s
-            """, [id_token, admin_user, id_sol])
+            """, [admin_user, id_sol])
 
         # Enviar correo al solicitante
         if correo:
@@ -736,22 +734,16 @@ def listar_tokens():
         with db_connection() as (conn, cursor):
             cursor.execute("""
                 SELECT 
-                    t.id_token, 
-                    t.nombre_token, 
-                    t.token,
-                    t.puede_leer, 
-                    t.puede_escribir,
-                    t.activo, 
-                    t.max_requests_dia,
-                    t.fecha_creacion,
-                    COALESCE(s.nombre, 'Desconocido') AS nombre_solicitante,
-                    COALESCE(s.correo, '—') AS correo_solicitante,
-                    s.empresa AS carnet,
-                    s.cargo AS numero_grupo,
-                    s.motivo AS apis_solicitadas
-                FROM api_tokens t
-                LEFT JOIN api_solicitudes s ON t.id_solicitud = s.id_solicitud
-                ORDER BY t.fecha_creacion DESC
+                    id_token, 
+                    nombre_token, 
+                    token,
+                    solo_lectura, 
+                    activo, 
+                    max_requests_dia,
+                    total_usos,
+                    fecha_creacion
+                FROM api_tokens
+                ORDER BY fecha_creacion DESC
             """)
             
             rows = []
@@ -760,19 +752,11 @@ def listar_tokens():
                     "id_token": row[0],
                     "nombre_token": row[1],
                     "token_preview": row[2][:8] + "..." if row[2] else "",
-                    "puede_leer": row[3],
-                    "puede_escribir": row[4],
-                    "activo": row[5],
-                    "max_requests_dia": row[6] or 1000,
-                    "fecha_creacion": str(row[7]) if row[7] else "",
-                    "nombre_solicitante": row[8],
-                    "correo_solicitante": row[9],
-                    "carnet": row[10] or "",
-                    "numero_grupo": row[11] or "",
-                    "apis_solicitadas": row[12] or "",
-                    "requests_hoy": 0,
-                    "total_usos": 0,
-                    "ultimo_uso": ""
+                    "solo_lectura": row[3],
+                    "activo": row[4],
+                    "max_requests_dia": row[5] or 1000,
+                    "total_usos": row[6] or 0,
+                    "fecha_creacion": str(row[7]) if row[7] else ""
                 }
                 rows.append(token_dict)
             
@@ -1005,9 +989,9 @@ def token_publico_required(f):
             with db_connection() as (conn, cursor):
                 cursor.execute("""
                     SELECT t.id_token, t.activo, t.max_requests_dia, 
-                           t.endpoints_permitidos, s.nombre
+                           t.endpoints_permitidos, u.nombre
                     FROM api_tokens t
-                    LEFT JOIN api_solicitudes s ON t.id_solicitud = s.id_solicitud
+                    JOIN usuarios u ON t.id_usuario = u.id_usuario
                     WHERE t.token = %s
                 """, [token_str])
                 row = cursor.fetchone()
