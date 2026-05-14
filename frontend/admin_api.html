@@ -112,7 +112,7 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
         <input type="password" id="admin-password" placeholder="Tu contraseña">
       </div>
       
-   <!--  <button class="btn" onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;">🔓 Acceder como Admin</button>-->
+   <button class="btn" onclick="loginAdmin()" style="width:100%;background:var(--accent);color:#fff;">🔓 Acceder como Admin</button>
     </div>
   </div>
 </div>
@@ -416,7 +416,7 @@ async function loginAdmin() {
   }
   
   try {
-    const res = await fetch(`${CONFIG.API_BASE_URL}/auth/login`, {
+    const res = await fetch(`${CONFIG.API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
