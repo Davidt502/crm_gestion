@@ -6,7 +6,7 @@ from functools import wraps
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from flask import Blueprint, request, jsonify, g
+from flask import Blueprint, request, jsonify
 from database import db_connection
 from middleware.auth_middleware import token_required, get_usuario
 
@@ -205,19 +205,26 @@ def solicitar_acceso():
     if not request.is_json:
         return jsonify({"error": "Content-Type debe ser application/json"}), 400
 
-    data    = request.get_json(silent=True) or {}
-    nombre  = str(data.get("nombre",  "")).strip()
-    correo  = str(data.get("correo",  "")).strip()
-    tel     = str(data.get("telefono","")).strip()
-    empresa = str(data.get("empresa", "")).strip()
-    cargo   = str(data.get("cargo",   "")).strip()
-    motivo  = str(data.get("motivo",  "")).strip()
-    ip      = _get_ip()
-    ua      = _get_ua()
+    data             = request.get_json(silent=True) or {}
+    nombre           = str(data.get("nombre",            "")).strip()
+    carnet           = str(data.get("carnet",            "")).strip()
+    tel              = str(data.get("telefono",          "")).strip()
+    correo           = str(data.get("correo_estudiante", "")).strip()
+    numero_grupo     = str(data.get("numero_grupo",      "")).strip()
+    apis_raw         = data.get("apis_solicitadas", [])
+    # Guardar apis_solicitadas como string en la columna 'motivo'
+    if isinstance(apis_raw, list):
+        apis_solicitadas = ", ".join(str(a) for a in apis_raw)
+    else:
+        apis_solicitadas = str(apis_raw).strip()
+    ip = _get_ip()
+    ua = _get_ua()
 
-    if not nombre: return jsonify({"error": "Nombre requerido."}), 400
-    if not correo: return jsonify({"error": "Correo requerido."}), 400
-    if not motivo: return jsonify({"error": "Motivo requerido."}), 400
+    if not nombre:            return jsonify({"error": "Nombre completo requerido."}), 400
+    if not carnet:            return jsonify({"error": "Número de carnet requerido."}), 400
+    if not correo:            return jsonify({"error": "Correo estudiantil requerido."}), 400
+    if not numero_grupo:      return jsonify({"error": "Número de grupo requerido."}), 400
+    if not apis_solicitadas:  return jsonify({"error": "Debes indicar qué API(s) deseas habilitar."}), 400
 
     if _ip_bloqueada(ip):
         return jsonify({"error": "Acceso denegado."}), 403
@@ -231,42 +238,43 @@ def solicitar_acceso():
                 WHERE correo=%s AND estado='Pendiente'
             """, [correo])
             if cursor.fetchone():
-                return jsonify({"error": "Ya tienes una solicitud pendiente."}), 400
+                return jsonify({"error": "Ya tienes una solicitud pendiente con ese correo."}), 400
 
+            # Columnas reutilizadas: empresa=carnet, cargo=numero_grupo, motivo=apis_solicitadas
             cursor.execute("""
                 INSERT INTO api_solicitudes
                     (nombre,correo,telefono,empresa,cargo,motivo,ip_solicitud,user_agent,token_verificacion)
                 VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 RETURNING id_solicitud
-            """, [nombre, correo, tel or None, empresa or None, cargo or None, motivo, ip, ua, token_ver])
+            """, [nombre, correo, tel or None, carnet, numero_grupo, apis_solicitadas, ip, ua, token_ver])
             id_sol = cursor.fetchone()[0]
 
         # Notificar al admin por correo
         if ADMIN_EMAIL:
-            aprobar_url = f"{BACKEND_URL}/api/portal/aprobar-link/{token_ver}"
+            aprobar_url  = f"{BACKEND_URL}/api/portal/aprobar-link/{token_ver}"
             rechazar_url = f"{BACKEND_URL}/api/portal/rechazar-link/{token_ver}"
             html = f"""
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto">
             <h2 style="color:#2563eb">🔔 Nueva solicitud de acceso a API</h2>
             <table style="width:100%;border-collapse:collapse">
               <tr><td style="padding:8px;font-weight:bold">Nombre:</td><td>{nombre}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold">Correo:</td><td>{correo}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold">Carnet:</td><td>{carnet}</td></tr>
               <tr><td style="padding:8px;font-weight:bold">Teléfono:</td><td>{tel or 'N/A'}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold">Empresa:</td><td>{empresa or 'N/A'}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold">Cargo:</td><td>{cargo or 'N/A'}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold">Correo estudiantil:</td><td>{correo}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold">Número de grupo:</td><td>{numero_grupo}</td></tr>
+              <tr><td style="padding:8px;font-weight:bold">APIs solicitadas:</td><td>{apis_solicitadas}</td></tr>
               <tr><td style="padding:8px;font-weight:bold">IP:</td><td>{ip}</td></tr>
-              <tr><td style="padding:8px;font-weight:bold">Motivo:</td><td>{motivo}</td></tr>
             </table>
-            <div style="margin-top:24px;display:flex;gap:12px">
+            <div style="margin-top:24px">
               <a href="{aprobar_url}" style="background:#16a34a;color:white;padding:12px 24px;text-decoration:none;border-radius:6px">✅ Aprobar</a>
               &nbsp;&nbsp;
               <a href="{rechazar_url}" style="background:#dc2626;color:white;padding:12px 24px;text-decoration:none;border-radius:6px">❌ Rechazar</a>
             </div>
             <p style="color:#6b7280;font-size:12px;margin-top:16px">
-              También puedes gestionarla desde el panel: {FRONTEND_URL}/admin_api.html
+              Panel de administración: {FRONTEND_URL}/admin_api.html
             </p>
             </div>"""
-            _enviar_correo(ADMIN_EMAIL, f"[CRM API] Nueva solicitud de {nombre} ({empresa})", html)
+            _enviar_correo(ADMIN_EMAIL, f"[CRM API] Nueva solicitud de {nombre} (Carnet: {carnet})", html)
 
         return jsonify({
             "success":     True,
@@ -356,8 +364,35 @@ curl -H "X-API-Token: {nuevo_token[:20]}..." \\
 # ══════════════════════════════════════════════════════════════
 
 def _solo_admin():
-    user = getattr(request, "current_user", {})
-    return user.get("rol") == "admin", user.get("username","admin")
+    """
+    Verifica si el usuario autenticado es admin.
+    Primero intenta leer 'rol' del payload JWT (request.current_user).
+    Si no viene en el token, consulta la BD por username.
+    """
+    user = getattr(request, "current_user", {}) or {}
+    username = user.get("username", "")
+
+    if not username:
+        return False, ""
+
+    # Si el JWT ya trae el rol, usarlo directamente
+    if "rol" in user:
+        return user["rol"] == "admin", username
+
+    # Fallback: consultar la BD (cuando el JWT no incluye el campo rol)
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute(
+                "SELECT rol FROM usuarios WHERE username = %s AND activo = TRUE",
+                [username]
+            )
+            row = cursor.fetchone()
+            if row:
+                return row[0] == "admin", username
+    except Exception as exc:
+        logger.error("_solo_admin DB lookup: %s", exc)
+
+    return False, username
 
 @api_publica_bp.route("/api/admin/solicitudes", methods=["GET"])
 @token_required
@@ -370,11 +405,14 @@ def listar_solicitudes():
             where  = "WHERE 1=1" + (" AND s.estado=%s" if estado else "")
             params = [estado] if estado else []
             cursor.execute(f"""
-                SELECT s.id_solicitud,s.nombre,s.correo,s.telefono,s.empresa,s.cargo,
-                       s.motivo,s.estado,s.ip_solicitud,s.user_agent,
-                       s.fecha_solicitud,s.aprobado_por,s.fecha_resolucion,s.notas_admin,
-                       t.nombre_token,t.activo AS token_activo,t.puede_leer,t.puede_escribir,
-                       t.total_usos,t.id_token
+                SELECT s.id_solicitud, s.nombre, s.correo, s.telefono,
+                       s.empresa  AS carnet,
+                       s.cargo    AS numero_grupo,
+                       s.motivo   AS apis_solicitadas,
+                       s.estado, s.ip_solicitud, s.user_agent,
+                       s.fecha_solicitud, s.aprobado_por, s.fecha_resolucion, s.notas_admin,
+                       t.nombre_token, t.activo AS token_activo, t.puede_leer, t.puede_escribir,
+                       t.total_usos, t.id_token
                 FROM api_solicitudes s
                 LEFT JOIN api_tokens t ON s.id_solicitud=t.id_solicitud
                 {where} ORDER BY s.fecha_solicitud DESC
@@ -515,11 +553,14 @@ def listar_tokens():
     try:
         with db_connection() as (conn, cursor):
             cursor.execute("""
-                SELECT t.id_token,t.nombre_token,t.puede_leer,t.puede_escribir,
-                       t.activo,t.expira_en,t.total_usos,t.requests_hoy,
-                       t.max_requests_dia,t.ultimo_uso,t.fecha_creacion,
+                SELECT t.id_token, t.nombre_token, t.puede_leer, t.puede_escribir,
+                       t.activo, t.expira_en, t.total_usos, t.requests_hoy,
+                       t.max_requests_dia, t.ultimo_uso, t.fecha_creacion,
                        LEFT(t.token,8)||'...' AS token_preview,
-                       s.nombre,s.correo,s.telefono,s.empresa
+                       s.nombre, s.correo, s.telefono,
+                       s.empresa AS carnet,
+                       s.cargo   AS numero_grupo,
+                       s.motivo  AS apis_solicitadas
                 FROM api_tokens t
                 LEFT JOIN api_solicitudes s ON t.id_solicitud=s.id_solicitud
                 ORDER BY t.fecha_creacion DESC

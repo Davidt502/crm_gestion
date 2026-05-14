@@ -117,12 +117,13 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
 <div class="sidebar" id="sidebar" style="display:none;">
   <div class="sidebar-logo">CRM <span>Admin</span></div>
   <nav>
-    <div class="nav-item active" onclick="goTo('dashboard')">📊 Dashboard</div>
-    <div class="nav-item" onclick="goTo('solicitudes')">📋 Solicitudes <span class="badge" id="badge-pendientes">0</span></div>
-    <div class="nav-item" onclick="goTo('tokens')">🔑 Tokens</div>
-    <div class="nav-item" onclick="goTo('logs')">📜 Logs</div>
-    <div class="nav-item" onclick="goTo('ips')">🚫 IPs bloqueadas</div>
-    <div class="nav-item" onclick="goTo('alertas')">⚠️ Alertas</div>
+    <div class="nav-item active" onclick="goTo('dashboard',this)">📊 Dashboard</div>
+    <div class="nav-item" onclick="goTo('crear-usuario',this)">➕ Crear usuario</div>
+    <div class="nav-item" onclick="goTo('solicitudes',this)">📋 Solicitudes <span class="badge" id="badge-pendientes">0</span></div>
+    <div class="nav-item" onclick="goTo('tokens',this)">🔑 Tokens</div>
+    <div class="nav-item" onclick="goTo('logs',this)">📜 Logs</div>
+    <div class="nav-item" onclick="goTo('ips',this)">🚫 IPs bloqueadas</div>
+    <div class="nav-item" onclick="goTo('alertas',this)">⚠️ Alertas</div>
     <div class="nav-item" onclick="cerrarSesionAdmin()" style="margin-top:auto;color:var(--red);">🚪 Cerrar sesión</div>
   </nav>
 </div>
@@ -138,20 +139,81 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
       </table></div>
   </div>
 
+  <!-- ══ PÁGINA: CREAR USUARIO ══ -->
+  <div class="page" id="page-crear-usuario">
+    <div class="page-header"><div><div class="page-title">Crear usuario</div></div></div>
+    <div id="crear-alert" style="display:none;max-width:560px;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;"></div>
+    <div id="token-generado" style="display:none;max-width:560px;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;">
+      <p style="color:var(--green);font-weight:700;margin-bottom:8px;">✅ Usuario creado correctamente</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Token generado — guárdalo, no se mostrará de nuevo:</p>
+      <div id="token-box" style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:13px;word-break:break-all;color:#a5d6ff;"></div>
+      <div style="margin-top:12px;display:flex;gap:10px;">
+        <button class="btn btn-ghost" onclick="copiarToken()">📋 Copiar token</button>
+        <button class="btn btn-primary" onclick="resetCrear()">➕ Crear otro</button>
+      </div>
+    </div>
+    <div id="form-crear" style="max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Registra directamente a un estudiante y genera su token al instante.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Nombre completo *</label>
+          <input type="text" id="c-nombre" placeholder="Nombre del estudiante"></div>
+        <div class="field"><label>Número de carnet *</label>
+          <input type="text" id="c-carnet" placeholder="202300000"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Teléfono</label>
+          <input type="tel" id="c-tel" placeholder="+502 0000-0000"></div>
+        <div class="field"><label>Correo estudiantil *</label>
+          <input type="email" id="c-correo" placeholder="carnet@estudiantes.usac.edu.gt"></div>
+      </div>
+      <div class="field"><label>Número de grupo *</label>
+        <input type="text" id="c-grupo" placeholder="Ej: Grupo 1, Sección A..."></div>
+      <div class="field">
+        <label>APIs a habilitar *</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;" id="c-apis">
+          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" value="/api/pub/clientes"> <span style="font-family:var(--mono);">📋 /api/pub/clientes</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" value="/api/pub/proveedores"> <span style="font-family:var(--mono);">🏢 /api/pub/proveedores</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" value="/api/pub/empleados"> <span style="font-family:var(--mono);">👤 /api/pub/empleados</span>
+          </label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field"><label>Límite diario de requests</label>
+          <input type="number" id="c-limite" value="1000" min="1"></div>
+        <div class="field"><label>Permisos de escritura</label>
+          <select id="c-permisos">
+            <option value="0">Solo lectura</option>
+            <option value="1">Lectura y escritura</option>
+          </select></div>
+      </div>
+      <button class="btn btn-primary" id="btn-crear" onclick="crearUsuario()">✅ Crear usuario y generar token</button>
+    </div>
+  </div>
+
+  <!-- ══ PÁGINA: SOLICITUDES ══ -->
   <div class="page" id="page-solicitudes">
     <div class="page-header"><div><div class="page-title">Solicitudes de acceso</div></div></div>
     <div class="filter-bar"><div class="filter-btn active" onclick="filtrarSol(this,'')">Todas</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Pendiente')">Pendientes</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Aprobado')">Aprobadas</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Rechazado')">Rechazadas</div></div>
-    <div class="table-wrap"><table><thead><tr><th>#</th><th>Nombre</th><th>Correo</th><th>Empresa</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <div class="table-wrap"><table><thead><tr>
+      <th>#</th><th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs solicitadas</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
+    </tr></thead>
         <tbody id="tabla-solicitudes"></tbody>
       </table></div>
   </div>
 
   <div class="page" id="page-tokens">
     <div class="page-header"><div><div class="page-title">Tokens activos</div></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Nombre</th><th>Usuario</th><th>Permisos</th><th>Usos hoy</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <div class="table-wrap"><table><thead><tr>
+      <th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs</th><th>Usos hoy</th><th>Estado</th><th>Acciones</th>
+    </tr></thead>
         <tbody id="tabla-tokens"></tbody>
       </table></div>
   </div>
@@ -163,9 +225,10 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
       </table></div>
   </div>
 
+  <!-- Bug 9 corregido: faltaba <table> de apertura -->
   <div class="page" id="page-ips">
     <div class="page-header"><div><div class="page-title">IPs bloqueadas</div></div></div>
-    <div class="table-wrap"><tr><thead><th>IP</th><th>Motivo</th><th>Fecha</th><th>Acción</th></thead>
+    <div class="table-wrap"><table><thead><tr><th>IP</th><th>Motivo</th><th>Fecha</th><th>Acción</th></tr></thead>
         <tbody id="tabla-ips"></tbody>
       </table></div>
   </div>
@@ -180,7 +243,14 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
 
 <div id="toast"></div>
 
-<script src="js/config.js"></script>
+<script>
+// CONFIG inline — reemplaza el js/config.js que no existe
+const CONFIG = {
+  API_BASE_URL: "https://crm-gestion.onrender.com",
+  TOKEN_KEY:    "crm_token",
+  USER_KEY:     "crm_user"
+};
+</script>
 <script>
 let solFiltro = '';
 let solActual = null;
@@ -279,16 +349,96 @@ function cerrarSesionAdmin() {
   toast('Sesión cerrada', 'success');
 }
 
-function goTo(page) {
+function goTo(page, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
   if (page === 'solicitudes') loadSolicitudes();
   if (page === 'tokens') loadTokens();
   if (page === 'logs') loadLogs();
   if (page === 'ips') loadIPs();
   if (page === 'alertas') loadAlertas();
-  event.currentTarget.classList.add('active');
+}
+
+// ── Crear usuario directamente (admin) ────────────────────────
+async function crearUsuario() {
+  const nombre = document.getElementById('c-nombre').value.trim();
+  const carnet = document.getElementById('c-carnet').value.trim();
+  const tel    = document.getElementById('c-tel').value.trim();
+  const correo = document.getElementById('c-correo').value.trim();
+  const grupo  = document.getElementById('c-grupo').value.trim();
+  const limite = parseInt(document.getElementById('c-limite').value) || 1000;
+  const escr   = document.getElementById('c-permisos').value === '1';
+  const checks = document.querySelectorAll('#c-apis input[type=checkbox]:checked');
+  const apis   = Array.from(checks).map(cb => cb.value);
+
+  const alrtEl = document.getElementById('crear-alert');
+  const mostrarError = msg => {
+    alrtEl.textContent = msg;
+    alrtEl.style.cssText = 'display:block;background:rgba(239,68,68,0.1);border:1px solid var(--red);color:#fca5a5;';
+  };
+
+  if (!nombre)      { mostrarError('Nombre completo requerido.'); return; }
+  if (!carnet)      { mostrarError('Número de carnet requerido.'); return; }
+  if (!correo)      { mostrarError('Correo estudiantil requerido.'); return; }
+  if (!grupo)       { mostrarError('Número de grupo requerido.'); return; }
+  if (!apis.length) { mostrarError('Selecciona al menos una API a habilitar.'); return; }
+
+  alrtEl.style.display = 'none';
+  const btn = document.getElementById('btn-crear');
+  btn.disabled = true; btn.textContent = 'Creando...';
+
+  try {
+    // Paso 1: registrar la solicitud
+    const r1 = await fetch(`${CONFIG.API_BASE_URL}/api/portal/solicitar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre, carnet, telefono: tel,
+        correo_estudiante: correo,
+        numero_grupo: grupo,
+        apis_solicitadas: apis
+      })
+    });
+    const d1 = await r1.json();
+    if (!r1.ok) { mostrarError(d1.error || 'Error al registrar.'); btn.disabled=false; btn.textContent='✅ Crear usuario y generar token'; return; }
+
+    // Paso 2: aprobar inmediatamente
+    const r2 = await fetch(`${CONFIG.API_BASE_URL}/api/admin/solicitudes/${d1.id_solicitud}/aprobar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
+      body: JSON.stringify({ puede_leer: true, puede_escribir: escr, max_requests_dia: limite, endpoints_permitidos: apis })
+    });
+    const d2 = await r2.json();
+    if (!r2.ok) { mostrarError(d2.error || 'Error al aprobar.'); btn.disabled=false; btn.textContent='✅ Crear usuario y generar token'; return; }
+
+    // Mostrar token
+    document.getElementById('form-crear').style.display = 'none';
+    document.getElementById('token-box').textContent = d2.token;
+    document.getElementById('token-generado').style.display = 'block';
+    toast('Usuario creado y token generado', 'success');
+    loadStats();
+  } catch(e) {
+    mostrarError('Error de conexión.');
+    btn.disabled = false; btn.textContent = '✅ Crear usuario y generar token';
+  }
+}
+
+function copiarToken() {
+  const txt = document.getElementById('token-box').textContent;
+  navigator.clipboard.writeText(txt).then(() => toast('Token copiado', 'success'));
+}
+
+function resetCrear() {
+  document.getElementById('form-crear').style.display = 'block';
+  document.getElementById('token-generado').style.display = 'none';
+  document.getElementById('crear-alert').style.display = 'none';
+  ['c-nombre','c-carnet','c-tel','c-correo','c-grupo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('c-limite').value = '1000';
+  document.querySelectorAll('#c-apis input').forEach(cb => cb.checked = false);
+  const btn = document.getElementById('btn-crear');
+  btn.disabled = false; btn.textContent = '✅ Crear usuario y generar token';
 }
 
 async function loadStats() {
@@ -315,14 +465,16 @@ async function loadSolicitudes() {
   const [, d] = await apiFetch(url);
   const list = d.solicitudes || [];
   const tb = document.getElementById('tabla-solicitudes');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin solicitudes</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="9" class="empty">Sin solicitudes</td></tr>'; return; }
   tb.innerHTML = list.map(s => `
     <tr>
       <td>${s.id_solicitud}</td>
-      <td><strong>${s.nombre}</strong><br><span style="font-size:11px;color:var(--muted)">${s.cargo || ''}</span></td>
-      <td>${s.correo}</td>
-      <td>${s.empresa || '—'}</td>
-      <td style="font-size:12px">${new Date(s.fecha_solicitud).toLocaleDateString()}</td>
+      <td><strong>${s.nombre}</strong></td>
+      <td style="font-family:monospace;font-size:12px">${s.carnet || '—'}</td>
+      <td style="font-size:12px">${s.correo}</td>
+      <td>${s.numero_grupo || '—'}</td>
+      <td style="font-size:11px;max-width:160px;word-break:break-word">${s.apis_solicitadas || '—'}</td>
+      <td style="font-size:12px">${s.fecha_solicitud ? new Date(s.fecha_solicitud).toLocaleDateString() : '—'}</td>
       <td><span class="badge ${s.estado.toLowerCase()}">${s.estado}</span></td>
       <td>${s.estado === 'Pendiente' ? `<button class="btn btn-green" onclick="abrirAprobar(${s.id_solicitud})">✅ Aprobar</button>
         <button class="btn btn-red" onclick="abrirRechazar(${s.id_solicitud})">❌ Rechazar</button>` : '—'}</td>
@@ -345,15 +497,17 @@ async function loadTokens() {
   const [, d] = await apiFetch('/api/admin/tokens');
   const list = d.tokens || [];
   const tb = document.getElementById('tabla-tokens');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin tokens</td></tr>'; return; }
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin tokens</td></tr>'; return; }
   tb.innerHTML = list.map(t => `
     <tr>
       <td>${t.nombre_token}</td>
-      <td>${t.nombre || t.correo || '—'}</td>
-      <td>${t.puede_leer ? '📖 Leer' : ''} ${t.puede_escribir ? '✏️ Escribir' : ''}</td>
+      <td style="font-family:monospace;font-size:12px">${t.carnet || '—'}</td>
+      <td style="font-size:12px">${t.correo || '—'}</td>
+      <td>${t.numero_grupo || '—'}</td>
+      <td style="font-size:11px;max-width:150px;word-break:break-word">${t.apis_solicitadas || '—'}</td>
       <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
       <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸' : '▶'}</button></td>
+      <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
     </tr>
   `).join('');
 }
