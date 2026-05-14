@@ -29,6 +29,7 @@ nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-con
 .nav-btn{padding:8px 18px;border-radius:20px;font-family:'Syne',sans-serif;font-size:13px;
   font-weight:700;cursor:pointer;background:var(--accent);color:#fff;border:none;transition:background 0.2s;}
 .nav-btn:hover{background:#2563eb;}
+.nav-user{display:flex;align-items:center;gap:12px;}
 
 /* HERO */
 .hero{position:relative;z-index:1;text-align:center;padding:72px 24px 48px;}
@@ -124,155 +125,210 @@ pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:
 #toast.show{transform:translateY(0);opacity:1;}
 #toast.ok{background:#064e3b;color:#6ee7b7;border:1px solid #059669;}
 #toast.err{background:#450a0a;color:#fca5a5;border:1px solid var(--red);}
+
+/* LOGIN SCREEN */
+.login-screen{
+  position:fixed; inset:0; background:var(--bg); z-index:1000;
+  display:flex; align-items:center; justify-content:center;
+}
+.login-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:20px;
+  padding:40px; max-width:420px; width:90%; text-align:center;
+}
+.login-card h2{ font-size:24px; font-weight:800; margin-bottom:8px; }
+.login-sub{ color:var(--muted); font-size:13px; margin-bottom:28px; }
+.login-error{
+  background:rgba(239,68,68,0.1); border:1px solid var(--red);
+  padding:10px; border-radius:8px; font-size:13px; margin-bottom:16px; color:#fca5a5;
+}
+.btn-login{
+  width:100%; background:var(--accent); color:#fff; border:none;
+  padding:12px; border-radius:10px; font-weight:700; font-size:14px;
+  cursor:pointer; margin-top:8px;
+}
+.btn-login:hover{background:#2563eb;}
+.login-footer{ margin-top:24px; font-size:12px; color:var(--muted); }
+.login-footer a{ color:var(--accent); text-decoration:none; cursor:pointer; }
 </style>
 </head>
 <body>
 <div class="orb"></div>
 
-<!-- NAV -->
-<nav>
-  <div class="nav-logo">CRM <span>API</span></div>
-  <div class="nav-badge">v1.0 · REST · JSON</div>
-  <button class="nav-btn" onclick="document.getElementById('solicitar').scrollIntoView({behavior:'smooth'})">
-    📝 Solicitar acceso
-  </button>
-</nav>
-
-<!-- HERO -->
-<section class="hero">
-  <div class="eyebrow">🔌 Portal Público — Ing. Software USAC</div>
-  <h1>Accede a los<br>datos del CRM</h1>
-  <p class="hero-sub">Solicita tu token de acceso a la API. Sin registro previo — solo llena el formulario con tus datos de estudiante.</p>
-  <div class="hero-btns">
-    <button class="btn-hero btn-p" onclick="document.getElementById('solicitar').scrollIntoView({behavior:'smooth'})">📝 Solicitar acceso</button>
-    <button class="btn-hero btn-g" onclick="document.getElementById('apis').scrollIntoView({behavior:'smooth'})">📚 Ver APIs disponibles</button>
-  </div>
-  <div class="steps">
-    <div class="step"><div class="step-num">1</div><h4>Llena el formulario</h4><p>Con tus datos de estudiante</p></div>
-    <div class="step"><div class="step-num">2</div><h4>Admin lo revisa</h4><p>En 24–48 horas</p></div>
-    <div class="step"><div class="step-num">3</div><h4>Recibes el token</h4><p>En tu correo estudiantil</p></div>
-    <div class="step"><div class="step-num">4</div><h4>Consume la API</h4><p>Con X-API-Token</p></div>
-  </div>
-</section>
-
-<!-- FEATURES -->
-<div class="features">
-  <div class="feature"><div class="fi">🔐</div><h3>Acceso controlado</h3><p>El admin aprueba cada solicitud manualmente.</p></div>
-  <div class="feature"><div class="fi">📊</div><h3>Monitoreo total</h3><p>Cada llamada queda registrada con IP y resultado.</p></div>
-  <div class="feature"><div class="fi">⚡</div><h3>Token personalizado</h3><p>Solo accedes a las APIs que solicitaste.</p></div>
-  <div class="feature"><div class="fi">🛡️</div><h3>Límite diario</h3><p>El admin configura cuántas requests puedes hacer por día.</p></div>
-</div>
-
-<!-- APIs DISPONIBLES -->
-<div class="section" id="apis">
-  <div class="section-title">📚 APIs disponibles</div>
-  <div class="section-sub">Usa el header <code>X-API-Token: TU_TOKEN</code> en cada petición. Haz clic en un endpoint para ver más detalles.</div>
-
-  <div class="ep-card">
-    <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
-      <span class="badge-method get">GET</span>
-      <span class="ep-path">/api/pub/clientes</span>
-      <span class="ep-desc">Lista clientes activos</span>
+<!-- Pantalla de Login -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div style="font-size:48px;margin-bottom:20px;">🔑</div>
+    <h2>Acceso al Portal API</h2>
+    <p class="login-sub">Ingresa con tus credenciales proporcionadas por el administrador</p>
+    
+    <div id="login-error" class="login-error" style="display:none;"></div>
+    
+    <div class="field">
+      <label>Usuario</label>
+      <input type="text" id="login-username" placeholder="Tu usuario">
     </div>
-    <div class="ep-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 clientes con estado Activo.</p>
-      <pre>curl https://crm-gestion.onrender.com/api/pub/clientes \
-     -H "X-API-Token: TU_TOKEN"</pre>
-      <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
-      <pre>{ "clientes": [{ "id_cliente": 1, "nombre": "Juan Pérez", "correo": "juan@mail.com", "estado": "Activo" }], "total": 1 }</pre>
+    <div class="field">
+      <label>Contraseña</label>
+      <input type="password" id="login-password" placeholder="Tu contraseña">
     </div>
-  </div>
-
-  <div class="ep-card">
-    <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
-      <span class="badge-method get">GET</span>
-      <span class="ep-path">/api/pub/proveedores</span>
-      <span class="ep-desc">Lista proveedores activos</span>
-    </div>
-    <div class="ep-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 proveedores con su categoría.</p>
-      <pre>curl https://crm-gestion.onrender.com/api/pub/proveedores \
-     -H "X-API-Token: TU_TOKEN"</pre>
-      <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
-      <pre>{ "proveedores": [{ "id_proveedor": 1, "nombre_empresa": "Tech S.A.", "nit": "123456-7", "estado": "Activo", "nombre_categoria": "Tecnología" }], "total": 1 }</pre>
-    </div>
-  </div>
-
-  <div class="ep-card">
-    <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
-      <span class="badge-method get">GET</span>
-      <span class="ep-path">/api/pub/empleados</span>
-      <span class="ep-desc">Lista empleados activos</span>
-    </div>
-    <div class="ep-body">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 empleados con su dependencia.</p>
-      <pre>curl https://crm-gestion.onrender.com/api/pub/empleados \
-     -H "X-API-Token: TU_TOKEN"</pre>
-      <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
-      <pre>{ "empleados": [{ "id_empleado": 1, "nombre": "María López", "cargo": "Analista", "estado": "Activo", "nombre_dependencia": "Sistemas" }], "total": 1 }</pre>
-    </div>
+    
+    <button class="btn-login" onclick="loginPortal()">Iniciar Sesión</button>
+    
+    <p class="login-footer">¿No tienes cuenta? <a href="#" onclick="mostrarSolicitud()">Solicita acceso aquí</a></p>
   </div>
 </div>
 
-<!-- FORMULARIO -->
-<div class="form-section" id="solicitar">
-  <div class="form-card" id="form-card">
-    <div class="form-title">Solicitar acceso a la API</div>
-    <div class="form-sub">Sin registro previo. Llena tus datos y el administrador te enviará tu token al correo estudiantil.</div>
+<!-- Contenido principal del portal (oculto hasta login) -->
+<div id="contenido-portal" style="display:none;">
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo">CRM <span>API</span></div>
+    <div class="nav-badge">v1.0 · REST · JSON</div>
+    <div class="nav-user" id="user-info">
+      <span class="nav-badge" id="user-name-display"></span>
+      <button class="nav-btn" onclick="cerrarSesionPortal()" style="background:transparent;border:1px solid var(--border);">🚪 Salir</button>
+    </div>
+  </nav>
 
-    <div id="form-alert" class="alert-err"></div>
+  <!-- HERO -->
+  <section class="hero">
+    <div class="eyebrow">🔌 Portal Público — Ing. Software USAC</div>
+    <h1>Accede a los<br>datos del CRM</h1>
+    <p class="hero-sub">Solicita tu token de acceso a la API. Sin registro previo — solo llena el formulario con tus datos de estudiante.</p>
+    <div class="hero-btns">
+      <button class="btn-hero btn-p" onclick="document.getElementById('solicitar').scrollIntoView({behavior:'smooth'})">📝 Solicitar acceso</button>
+      <button class="btn-hero btn-g" onclick="document.getElementById('apis').scrollIntoView({behavior:'smooth'})">📚 Ver APIs disponibles</button>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><h4>Llena el formulario</h4><p>Con tus datos de estudiante</p></div>
+      <div class="step"><div class="step-num">2</div><h4>Admin lo revisa</h4><p>En 24–48 horas</p></div>
+      <div class="step"><div class="step-num">3</div><h4>Recibes el token</h4><p>En tu correo estudiantil</p></div>
+      <div class="step"><div class="step-num">4</div><h4>Consume la API</h4><p>Con X-API-Token</p></div>
+    </div>
+  </section>
 
-    <div class="form-row">
-      <div class="field">
-        <label>Nombre completo <span class="req">*</span></label>
-        <input type="text" id="f-nombre" placeholder="Tu nombre completo" autocomplete="name">
+  <!-- FEATURES -->
+  <div class="features">
+    <div class="feature"><div class="fi">🔐</div><h3>Acceso controlado</h3><p>El admin aprueba cada solicitud manualmente.</p></div>
+    <div class="feature"><div class="fi">📊</div><h3>Monitoreo total</h3><p>Cada llamada queda registrada con IP y resultado.</p></div>
+    <div class="feature"><div class="fi">⚡</div><h3>Token personalizado</h3><p>Solo accedes a las APIs que solicitaste.</p></div>
+    <div class="feature"><div class="fi">🛡️</div><h3>Límite diario</h3><p>El admin configura cuántas requests puedes hacer por día.</p></div>
+  </div>
+
+  <!-- APIs DISPONIBLES -->
+  <div class="section" id="apis">
+    <div class="section-title">📚 APIs disponibles</div>
+    <div class="section-sub">Usa el header <code>X-API-Token: TU_TOKEN</code> en cada petición. Haz clic en un endpoint para ver más detalles.</div>
+
+    <div class="ep-card">
+      <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="badge-method get">GET</span>
+        <span class="ep-path">/api/pub/clientes</span>
+        <span class="ep-desc">Lista clientes activos</span>
       </div>
-      <div class="field">
-        <label>No. de carnet <span class="req">*</span></label>
-        <input type="text" id="f-carnet" placeholder="202300000">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="field">
-        <label>Teléfono</label>
-        <input type="tel" id="f-telefono" placeholder="+502 0000-0000">
-      </div>
-      <div class="field">
-        <label>Correo estudiantil <span class="req">*</span></label>
-        <input type="email" id="f-correo" placeholder="carnet@estudiantes.usac.edu.gt">
-      </div>
-    </div>
-    <div class="field">
-      <label>Número de grupo <span class="req">*</span></label>
-      <input type="text" id="f-grupo" placeholder="Ej: Grupo 1, Sección A, Grupo B...">
-    </div>
-    <div class="field">
-      <label>APIs que deseas habilitar <span class="req">*</span></label>
-      <div class="api-grid">
-        <label class="api-opt">
-          <input type="checkbox" value="/api/pub/clientes" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
-          <div><span class="api-opt-path">📋 /api/pub/clientes</span><span class="api-opt-desc">Clientes activos</span></div>
-        </label>
-        <label class="api-opt">
-          <input type="checkbox" value="/api/pub/proveedores" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
-          <div><span class="api-opt-path">🏢 /api/pub/proveedores</span><span class="api-opt-desc">Proveedores activos</span></div>
-        </label>
-        <label class="api-opt">
-          <input type="checkbox" value="/api/pub/empleados" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
-          <div><span class="api-opt-path">👤 /api/pub/empleados</span><span class="api-opt-desc">Empleados activos</span></div>
-        </label>
+      <div class="ep-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 clientes con estado Activo.</p>
+        <pre>curl https://crm-gestion.onrender.com/api/pub/clientes \
+     -H "X-API-Token: TU_TOKEN"</pre>
+        <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
+        <pre>{ "clientes": [{ "id_cliente": 1, "nombre": "Juan Pérez", "correo": "juan@mail.com", "estado": "Activo" }], "total": 1 }</pre>
       </div>
     </div>
 
-    <button class="btn-submit" id="btn-enviar" onclick="enviarSolicitud()">
-      📝 Enviar solicitud de acceso
-    </button>
+    <div class="ep-card">
+      <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="badge-method get">GET</span>
+        <span class="ep-path">/api/pub/proveedores</span>
+        <span class="ep-desc">Lista proveedores activos</span>
+      </div>
+      <div class="ep-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 proveedores con su categoría.</p>
+        <pre>curl https://crm-gestion.onrender.com/api/pub/proveedores \
+     -H "X-API-Token: TU_TOKEN"</pre>
+        <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
+        <pre>{ "proveedores": [{ "id_proveedor": 1, "nombre_empresa": "Tech S.A.", "nit": "123456-7", "estado": "Activo", "nombre_categoria": "Tecnología" }], "total": 1 }</pre>
+      </div>
+    </div>
+
+    <div class="ep-card">
+      <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
+        <span class="badge-method get">GET</span>
+        <span class="ep-path">/api/pub/empleados</span>
+        <span class="ep-desc">Lista empleados activos</span>
+      </div>
+      <div class="ep-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 empleados con su dependencia.</p>
+        <pre>curl https://crm-gestion.onrender.com/api/pub/empleados \
+     -H "X-API-Token: TU_TOKEN"</pre>
+        <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
+        <pre>{ "empleados": [{ "id_empleado": 1, "nombre": "María López", "cargo": "Analista", "estado": "Activo", "nombre_dependencia": "Sistemas" }], "total": 1 }</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- FORMULARIO -->
+  <div class="form-section" id="solicitar">
+    <div class="form-card" id="form-card">
+      <div class="form-title">Solicitar acceso a la API</div>
+      <div class="form-sub">Sin registro previo. Llena tus datos y el administrador te enviará tu token al correo estudiantil.</div>
+
+      <div id="form-alert" class="alert-err"></div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Nombre completo <span class="req">*</span></label>
+          <input type="text" id="f-nombre" placeholder="Tu nombre completo" autocomplete="name">
+        </div>
+        <div class="field">
+          <label>No. de carnet <span class="req">*</span></label>
+          <input type="text" id="f-carnet" placeholder="202300000">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="tel" id="f-telefono" placeholder="+502 0000-0000">
+        </div>
+        <div class="field">
+          <label>Correo estudiantil <span class="req">*</span></label>
+          <input type="email" id="f-correo" placeholder="carnet@estudiantes.usac.edu.gt">
+        </div>
+      </div>
+      <div class="field">
+        <label>Número de grupo <span class="req">*</span></label>
+        <input type="text" id="f-grupo" placeholder="Ej: Grupo 1, Sección A, Grupo B...">
+      </div>
+      <div class="field">
+        <label>APIs que deseas habilitar <span class="req">*</span></label>
+        <div class="api-grid">
+          <label class="api-opt">
+            <input type="checkbox" value="/api/pub/clientes" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
+            <div><span class="api-opt-path">📋 /api/pub/clientes</span><span class="api-opt-desc">Clientes activos</span></div>
+          </label>
+          <label class="api-opt">
+            <input type="checkbox" value="/api/pub/proveedores" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
+            <div><span class="api-opt-path">🏢 /api/pub/proveedores</span><span class="api-opt-desc">Proveedores activos</span></div>
+          </label>
+          <label class="api-opt">
+            <input type="checkbox" value="/api/pub/empleados" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
+            <div><span class="api-opt-path">👤 /api/pub/empleados</span><span class="api-opt-desc">Empleados activos</span></div>
+          </label>
+        </div>
+      </div>
+
+      <button class="btn-submit" id="btn-enviar" onclick="enviarSolicitud()">
+        📝 Enviar solicitud de acceso
+      </button>
+    </div>
   </div>
 </div>
 
 <div id="toast"></div>
+
 <script>
 const API_BASE = "https://crm-gestion.onrender.com";
+let portalToken = null;
+let portalUser = null;
 
 function toast(msg, type='ok') {
   const t = document.getElementById('toast');
@@ -287,6 +343,76 @@ function showErr(msg) {
   a.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
+// ──────────────────────────────────────────────────────────────
+// LOGIN PORTAL
+// ──────────────────────────────────────────────────────────────
+async function loginPortal() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorDiv = document.getElementById('login-error');
+  
+  if (!username || !password) {
+    errorDiv.textContent = 'Usuario y contraseña requeridos';
+    errorDiv.style.display = 'block';
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE}/api/portal/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    
+    const data = await res.json();
+    
+    if (res.ok && data.success) {
+      portalToken = data.token;
+      portalUser = data.user;
+      localStorage.setItem('portal_token', portalToken);
+      localStorage.setItem('portal_user', JSON.stringify(portalUser));
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('contenido-portal').style.display = 'block';
+      cargarContenidoProtegido();
+      toast(`Bienvenido ${portalUser.nombre || portalUser.username}`, 'ok');
+    } else {
+      errorDiv.textContent = data.error || 'Credenciales inválidas';
+      errorDiv.style.display = 'block';
+    }
+  } catch(e) {
+    errorDiv.textContent = 'Error de conexión con el servidor';
+    errorDiv.style.display = 'block';
+  }
+}
+
+function mostrarSolicitud() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('contenido-portal').style.display = 'block';
+  document.getElementById('solicitar').scrollIntoView({behavior:'smooth'});
+}
+
+function cerrarSesionPortal() {
+  localStorage.removeItem('portal_token');
+  localStorage.removeItem('portal_user');
+  portalToken = null;
+  portalUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('contenido-portal').style.display = 'none';
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-error').style.display = 'none';
+}
+
+function cargarContenidoProtegido() {
+  const userNameSpan = document.getElementById('user-name-display');
+  if (userNameSpan) {
+    userNameSpan.innerHTML = `👤 ${portalUser?.nombre || portalUser?.username}`;
+  }
+}
+
+// ──────────────────────────────────────────────────────────────
+// SOLICITUD DE ACCESO (pública, sin login)
+// ──────────────────────────────────────────────────────────────
 async function enviarSolicitud() {
   const nombre = document.getElementById('f-nombre').value.trim();
   const carnet = document.getElementById('f-carnet').value.trim();
@@ -321,13 +447,13 @@ async function enviarSolicitud() {
           <div class="success-ttl">¡Solicitud enviada!</div>
           <div class="success-msg">
             Tu solicitud fue recibida. El administrador la revisará y te enviará el token a:<br><br>
-            <strong style="color:var(--accent2);font-size:15px;">${correo}</strong><br><br>
+            <strong style="color:var(--accent2);font-size:15px;">${escapeHtml(correo)}</strong><br><br>
             <span style="font-size:12px;">Tiempo estimado: 24–48 horas hábiles.</span>
           </div>
           <div class="success-box">
             <strong>Resumen de tu solicitud</strong><br>
-            👤 ${nombre} &nbsp;|&nbsp; Carnet: <code>${carnet}</code><br>
-            🏫 Grupo: ${grupo}<br>
+            👤 ${escapeHtml(nombre)} &nbsp;|&nbsp; Carnet: <code>${escapeHtml(carnet)}</code><br>
+            🏫 Grupo: ${escapeHtml(grupo)}<br>
             📡 APIs: <code>${apis.join(', ')}</code>
           </div>
           <button onclick="location.reload()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">
@@ -344,6 +470,41 @@ async function enviarSolicitud() {
     btn.disabled = false; btn.textContent = '📝 Enviar solicitud de acceso';
   }
 }
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+// Verificar sesión al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+  const token = localStorage.getItem('portal_token');
+  const user = localStorage.getItem('portal_user');
+  
+  if (token && user) {
+    portalToken = token;
+    portalUser = JSON.parse(user);
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('contenido-portal').style.display = 'block';
+    cargarContenidoProtegido();
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('contenido-portal').style.display = 'none';
+  }
+  
+  // Enter key en login
+  const passwordInput = document.getElementById('login-password');
+  if (passwordInput) {
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') loginPortal();
+    });
+  }
+});
 </script>
 </body>
 </html>

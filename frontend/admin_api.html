@@ -16,13 +16,13 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;display:flex;min-height:100vh;}
 
-.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);
+.sidebar{width:260px;background:var(--surface);border-right:1px solid var(--border);
   display:flex;flex-direction:column;padding:24px 0;flex-shrink:0;height:100vh;position:sticky;top:0;}
-.sidebar-logo{padding:0 20px 24px;font-size:17px;font-weight:800;border-bottom:1px solid var(--border);}
+.sidebar-logo{padding:0 20px 24px;font-size:18px;font-weight:800;border-bottom:1px solid var(--border);}
 .sidebar-logo span{color:var(--accent);}
 .sidebar nav{padding:16px 12px;flex:1;}
 .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
-  cursor:pointer;font-size:14px;font-weight:600;color:var(--muted);margin-bottom:4px;}
+  cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px;}
 .nav-item:hover{background:var(--surface2);color:var(--text);}
 .nav-item.active{background:rgba(59,130,246,0.15);color:var(--accent);}
 .nav-item .badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;}
@@ -62,7 +62,7 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
   display:none;align-items:center;justify-content:center;}
 .modal-overlay.open{display:flex;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;
-  width:100%;max-width:500px;max-height:80vh;overflow-y:auto;}
+  width:100%;max-width:550px;max-height:80vh;overflow-y:auto;}
 .modal-header{display:flex;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);}
 .modal-body{padding:24px;}
 .modal-footer{display:flex;gap:10px;justify-content:flex-end;padding:20px 24px;border-top:1px solid var(--border);}
@@ -85,6 +85,10 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
 .auth-screen{position:fixed;inset:0;background:var(--bg);z-index:1000;
   display:flex;align-items:center;justify-content:center;}
 .empty{text-align:center;padding:48px;color:var(--muted);}
+
+.api-checkbox-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;}
+.api-checkbox-group label{display:flex;align-items:center;gap:8px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:12px;}
 </style>
 </head>
 <body>
@@ -118,9 +122,10 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
   <div class="sidebar-logo">CRM <span>Admin</span></div>
   <nav>
     <div class="nav-item active" onclick="goTo('dashboard',this)">📊 Dashboard</div>
-    <div class="nav-item" onclick="goTo('crear-usuario',this)">➕ Crear usuario</div>
+    <div class="nav-item" onclick="goTo('crear-usuario',this)">➕ Crear usuario API</div>
+    <div class="nav-item" onclick="goTo('usuarios-portal',this)">👥 Usuarios Portal</div>
     <div class="nav-item" onclick="goTo('solicitudes',this)">📋 Solicitudes <span class="badge" id="badge-pendientes">0</span></div>
-    <div class="nav-item" onclick="goTo('tokens',this)">🔑 Tokens</div>
+    <div class="nav-item" onclick="goTo('tokens',this)">🔑 Tokens API</div>
     <div class="nav-item" onclick="goTo('logs',this)">📜 Logs</div>
     <div class="nav-item" onclick="goTo('ips',this)">🚫 IPs bloqueadas</div>
     <div class="nav-item" onclick="goTo('alertas',this)">⚠️ Alertas</div>
@@ -130,21 +135,25 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
 
 <!-- Main Content -->
 <div class="main" id="main" style="display:none;">
+  <!-- Dashboard -->
   <div class="page active" id="page-dashboard">
     <div class="page-header"><div><div class="page-title">Panel de Control</div></div>
       <button class="btn btn-ghost" onclick="loadStats()">↻ Actualizar</button></div>
     <div class="stats-grid" id="stats-grid"></div>
-    <div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Llamadas (7 días)</th></tr></thead>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Endpoint</th><th>Llamadas (7 días)</th></tr></thead>
         <tbody id="top-endpoints"></tbody>
-      </table></div>
+      </table>
+    </div>
   </div>
 
-  <!-- ══ PÁGINA: CREAR USUARIO ══ -->
+  <!-- Crear usuario API (estudiante con token) -->
   <div class="page" id="page-crear-usuario">
-    <div class="page-header"><div><div class="page-title">Crear usuario</div></div></div>
+    <div class="page-header"><div><div class="page-title">Crear usuario API</div></div></div>
     <div id="crear-alert" style="display:none;max-width:560px;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px;"></div>
     <div id="token-generado" style="display:none;max-width:560px;margin-bottom:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;">
-      <p style="color:var(--green);font-weight:700;margin-bottom:8px;">✅ Usuario creado correctamente</p>
+      <p style="color:var(--green);font-weight:700;margin-bottom:8px;">✅ Usuario API creado correctamente</p>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">Token generado — guárdalo, no se mostrará de nuevo:</p>
       <div id="token-box" style="background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px;font-family:var(--mono);font-size:13px;word-break:break-all;color:#a5d6ff;"></div>
       <div style="margin-top:12px;display:flex;gap:10px;">
@@ -153,7 +162,7 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
       </div>
     </div>
     <div id="form-crear" style="max-width:560px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;">
-      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Registra directamente a un estudiante y genera su token al instante.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Registra directamente a un estudiante y genera su token de API al instante.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
         <div class="field"><label>Nombre completo *</label>
           <input type="text" id="c-nombre" placeholder="Nombre del estudiante"></div>
@@ -170,16 +179,10 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
         <input type="text" id="c-grupo" placeholder="Ej: Grupo 1, Sección A..."></div>
       <div class="field">
         <label>APIs a habilitar *</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;" id="c-apis">
-          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:13px;">
-            <input type="checkbox" value="/api/pub/clientes"> <span style="font-family:var(--mono);">📋 /api/pub/clientes</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:13px;">
-            <input type="checkbox" value="/api/pub/proveedores"> <span style="font-family:var(--mono);">🏢 /api/pub/proveedores</span>
-          </label>
-          <label style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:9px 12px;cursor:pointer;font-size:13px;">
-            <input type="checkbox" value="/api/pub/empleados"> <span style="font-family:var(--mono);">👤 /api/pub/empleados</span>
-          </label>
+        <div class="api-checkbox-group" id="c-apis">
+          <label><input type="checkbox" value="/api/pub/clientes"> <span style="font-family:var(--mono);">📋 /api/pub/clientes</span></label>
+          <label><input type="checkbox" value="/api/pub/proveedores"> <span style="font-family:var(--mono);">🏢 /api/pub/proveedores</span></label>
+          <label><input type="checkbox" value="/api/pub/empleados"> <span style="font-family:var(--mono);">👤 /api/pub/empleados</span></label>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
@@ -191,67 +194,171 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
             <option value="1">Lectura y escritura</option>
           </select></div>
       </div>
-      <button class="btn btn-primary" id="btn-crear" onclick="crearUsuario()">✅ Crear usuario y generar token</button>
+      <button class="btn btn-primary" id="btn-crear" onclick="crearUsuarioAPI()">✅ Crear usuario y generar token</button>
     </div>
   </div>
 
-  <!-- ══ PÁGINA: SOLICITUDES ══ -->
+  <!-- Usuarios Portal (acceso con usuario/contraseña) -->
+  <div class="page" id="page-usuarios-portal">
+    <div class="page-header">
+      <div><div class="page-title">👥 Usuarios del Portal</div></div>
+      <button class="btn btn-primary" onclick="abrirModalUsuarioPortal()">+ Nuevo Usuario Portal</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Usuario</th><th>Nombre</th><th>Email</th><th>APIs Permitidas</th><th>Límite Diario</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="tabla-usuarios-portal"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Solicitudes -->
   <div class="page" id="page-solicitudes">
     <div class="page-header"><div><div class="page-title">Solicitudes de acceso</div></div></div>
-    <div class="filter-bar"><div class="filter-btn active" onclick="filtrarSol(this,'')">Todas</div>
+    <div class="filter-bar">
+      <div class="filter-btn active" onclick="filtrarSol(this,'')">Todas</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Pendiente')">Pendientes</div>
       <div class="filter-btn" onclick="filtrarSol(this,'Aprobado')">Aprobadas</div>
-      <div class="filter-btn" onclick="filtrarSol(this,'Rechazado')">Rechazadas</div></div>
-    <div class="table-wrap"><table><thead><tr>
-      <th>#</th><th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs solicitadas</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
-    </tr></thead>
+      <div class="filter-btn" onclick="filtrarSol(this,'Rechazado')">Rechazadas</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>#</th><th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs solicitadas</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="tabla-solicitudes"></tbody>
-      </table></div>
+      </table>
+    </div>
   </div>
 
+  <!-- Tokens API -->
   <div class="page" id="page-tokens">
-    <div class="page-header"><div><div class="page-title">Tokens activos</div></div></div>
-    <div class="table-wrap"><table><thead><tr>
-      <th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs</th><th>Usos hoy</th><th>Estado</th><th>Acciones</th>
-    </tr></thead>
+    <div class="page-header"><div><div class="page-title">Tokens API activos</div></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs</th><th>Usos hoy</th><th>Estado</th><th>Acciones</th></tr></thead>
         <tbody id="tabla-tokens"></tbody>
-      </table></div>
+      </table>
+    </div>
   </div>
 
+  <!-- Logs -->
   <div class="page" id="page-logs">
     <div class="page-header"><div><div class="page-title">Logs de uso</div></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Método</th><th>Endpoint</th><th>IP</th><th>Código</th></tr></thead>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Usuario</th><th>Método</th><th>Endpoint</th><th>IP</th><th>Código</th></tr></thead>
         <tbody id="tabla-logs"></tbody>
-      </table></div>
+      </table>
+    </div>
   </div>
 
-  <!-- Bug 9 corregido: faltaba <table> de apertura -->
+  <!-- IPs bloqueadas -->
   <div class="page" id="page-ips">
     <div class="page-header"><div><div class="page-title">IPs bloqueadas</div></div></div>
-    <div class="table-wrap"><table><thead><tr><th>IP</th><th>Motivo</th><th>Fecha</th><th>Acción</th></tr></thead>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>IP</th><th>Motivo</th><th>Fecha</th><th>Acción</th></tr></thead>
         <tbody id="tabla-ips"></tbody>
-      </table></div>
+      </table>
+    </div>
   </div>
 
+  <!-- Alertas -->
   <div class="page" id="page-alertas">
     <div class="page-header"><div><div class="page-title">Alertas</div></div></div>
-    <div class="table-wrap"><table><thead><tr><th>Tipo</th><th>Descripción</th><th>Fecha</th></tr></thead>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tipo</th><th>Descripción</th><th>Fecha</th></tr></thead>
         <tbody id="tabla-alertas"></tbody>
-      </table></div>
+      </table>
+    </div>
   </div>
 </div>
 
 <div id="toast"></div>
 
+<!-- Modal: Aprobar solicitud -->
+<div class="modal-overlay" id="modal-aprobar">
+  <div class="modal">
+    <div class="modal-header"><span>Aprobar solicitud</span><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Límite diario</label><input type="number" id="max-req" value="1000"></div>
+      <div class="field"><label>Permiso escritura</label><input type="checkbox" id="perm-escribir"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-green" onclick="confirmarAprobacion()">Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Rechazar solicitud -->
+<div class="modal-overlay" id="modal-rechazar">
+  <div class="modal">
+    <div class="modal-header"><span>Rechazar solicitud</span><button onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Motivo</label><textarea id="notas-rechazar" rows="3"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarRechazo()">Rechazar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Crear/Editar Usuario Portal -->
+<div class="modal-overlay" id="modal-usuario-portal">
+  <div class="modal">
+    <div class="modal-header">
+      <span id="modal-usuario-title">Nuevo Usuario Portal</span>
+      <button onclick="closeModalUsuarioPortal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Usuario *</label>
+        <input type="text" id="portal-username" placeholder="usuario (mínimo 3 caracteres)">
+      </div>
+      <div class="field">
+        <label>Contraseña *</label>
+        <input type="password" id="portal-password" placeholder="mínimo 6 caracteres">
+      </div>
+      <div class="field">
+        <label>Nombre completo *</label>
+        <input type="text" id="portal-nombre" placeholder="Nombre del usuario">
+      </div>
+      <div class="field">
+        <label>Email *</label>
+        <input type="email" id="portal-email" placeholder="correo@ejemplo.com">
+      </div>
+      <div class="field">
+        <label>Límite diario de requests</label>
+        <input type="number" id="portal-max-req" value="500" min="1">
+      </div>
+      <div class="field">
+        <label>APIs permitidas</label>
+        <div class="api-checkbox-group" id="portal-apis">
+          <label><input type="checkbox" value="/api/pub/clientes" checked> 📋 /api/pub/clientes</label>
+          <label><input type="checkbox" value="/api/pub/proveedores" checked> 🏢 /api/pub/proveedores</label>
+          <label><input type="checkbox" value="/api/pub/empleados" checked> 👤 /api/pub/empleados</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModalUsuarioPortal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="crearUsuarioPortal()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
 <script>
-// CONFIG inline — reemplaza el js/config.js que no existe
+// CONFIG
 const CONFIG = {
   API_BASE_URL: "https://crm-gestion.onrender.com",
   TOKEN_KEY:    "crm_token",
   USER_KEY:     "crm_user"
 };
-</script>
-<script>
+
 let solFiltro = '';
 let solActual = null;
 
@@ -293,6 +400,7 @@ async function verificarAdmin() {
   document.getElementById('sidebar').style.display = 'flex';
   document.getElementById('main').style.display = 'block';
   loadStats();
+  loadUsuariosPortal();
   return true;
 }
 
@@ -359,10 +467,11 @@ function goTo(page, el) {
   if (page === 'logs') loadLogs();
   if (page === 'ips') loadIPs();
   if (page === 'alertas') loadAlertas();
+  if (page === 'usuarios-portal') loadUsuariosPortal();
 }
 
-// ── Crear usuario directamente (admin) ────────────────────────
-async function crearUsuario() {
+// ── Crear usuario API (estudiante con token) ─────────────────
+async function crearUsuarioAPI() {
   const nombre = document.getElementById('c-nombre').value.trim();
   const carnet = document.getElementById('c-carnet').value.trim();
   const tel    = document.getElementById('c-tel').value.trim();
@@ -390,7 +499,6 @@ async function crearUsuario() {
   btn.disabled = true; btn.textContent = 'Creando...';
 
   try {
-    // Paso 1: registrar la solicitud
     const r1 = await fetch(`${CONFIG.API_BASE_URL}/api/portal/solicitar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -404,7 +512,6 @@ async function crearUsuario() {
     const d1 = await r1.json();
     if (!r1.ok) { mostrarError(d1.error || 'Error al registrar.'); btn.disabled=false; btn.textContent='✅ Crear usuario y generar token'; return; }
 
-    // Paso 2: aprobar inmediatamente
     const r2 = await fetch(`${CONFIG.API_BASE_URL}/api/admin/solicitudes/${d1.id_solicitud}/aprobar`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() },
@@ -413,11 +520,10 @@ async function crearUsuario() {
     const d2 = await r2.json();
     if (!r2.ok) { mostrarError(d2.error || 'Error al aprobar.'); btn.disabled=false; btn.textContent='✅ Crear usuario y generar token'; return; }
 
-    // Mostrar token
     document.getElementById('form-crear').style.display = 'none';
     document.getElementById('token-box').textContent = d2.token;
     document.getElementById('token-generado').style.display = 'block';
-    toast('Usuario creado y token generado', 'success');
+    toast('Usuario API creado y token generado', 'success');
     loadStats();
   } catch(e) {
     mostrarError('Error de conexión.');
@@ -441,12 +547,144 @@ function resetCrear() {
   btn.disabled = false; btn.textContent = '✅ Crear usuario y generar token';
 }
 
+// ── Usuarios Portal (acceso con login) ───────────────────────
+async function loadUsuariosPortal() {
+  try {
+    const [res, data] = await apiFetch('/api/admin/portal/usuarios');
+    if (!res.ok) {
+      console.error('Error loading portal users:', data);
+      return;
+    }
+    const tb = document.getElementById('tabla-usuarios-portal');
+    if (!data.usuarios || !data.usuarios.length) {
+      tb.innerHTML = '<tr><td colspan="8" class="empty">No hay usuarios portal</td></tr>';
+      return;
+    }
+    tb.innerHTML = data.usuarios.map(u => `
+      <tr>
+        <td>${u.id_usuario}</td>
+        <td><code style="font-family:var(--mono);font-size:11px;">${escapeHtml(u.username)}</code></td>
+        <td>${escapeHtml(u.nombre || '—')}</td>
+        <td style="font-size:12px">${escapeHtml(u.email || '—')}</td>
+        <td style="font-size:10px;max-width:180px;">${(u.endpoints_permitidos || []).map(e => e.split('/').pop()).join('<br>')}</td>
+        <td>${u.max_requests_dia || 500}</td>
+        <td><span class="badge ${u.activo ? 'aprobado' : 'rechazado'}">${u.activo ? 'Activo' : 'Inactivo'}</span></td>
+        <td>
+          <button class="btn btn-ghost" onclick="toggleUsuarioPortal(${u.id_usuario}, ${!u.activo})" style="padding:4px 8px;font-size:10px;">${u.activo ? '⏸ Desactivar' : '▶ Activar'}</button>
+          <button class="btn btn-red" onclick="eliminarUsuarioPortal(${u.id_usuario})" style="padding:4px 8px;font-size:10px;">🗑 Eliminar</button>
+        </td>
+      </tr>
+    `).join('');
+  } catch(e) {
+    console.error('Error loading portal users:', e);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
+
+function abrirModalUsuarioPortal() {
+  document.getElementById('modal-usuario-portal').classList.add('open');
+  document.getElementById('portal-username').value = '';
+  document.getElementById('portal-password').value = '';
+  document.getElementById('portal-nombre').value = '';
+  document.getElementById('portal-email').value = '';
+  document.getElementById('portal-max-req').value = '500';
+  document.querySelectorAll('#portal-apis input').forEach(cb => cb.checked = true);
+}
+
+function closeModalUsuarioPortal() {
+  document.getElementById('modal-usuario-portal').classList.remove('open');
+}
+
+async function crearUsuarioPortal() {
+  const username = document.getElementById('portal-username').value.trim();
+  const password = document.getElementById('portal-password').value;
+  const nombre = document.getElementById('portal-nombre').value.trim();
+  const email = document.getElementById('portal-email').value.trim();
+  const maxReqs = parseInt(document.getElementById('portal-max-req').value) || 500;
+  const endpoints = Array.from(document.querySelectorAll('#portal-apis input:checked')).map(cb => cb.value);
+  
+  if (!username || username.length < 3) {
+    toast('Usuario debe tener al menos 3 caracteres', 'error');
+    return;
+  }
+  if (!password || password.length < 6) {
+    toast('Contraseña debe tener al menos 6 caracteres', 'error');
+    return;
+  }
+  if (!nombre) {
+    toast('Nombre es requerido', 'error');
+    return;
+  }
+  if (!email) {
+    toast('Email es requerido', 'error');
+    return;
+  }
+  if (!endpoints.length) {
+    toast('Selecciona al menos una API', 'error');
+    return;
+  }
+  
+  const [res, data] = await apiFetch('/api/admin/portal/usuarios', {
+    method: 'POST',
+    body: JSON.stringify({
+      username, password, nombre, email,
+      max_requests_dia: maxReqs,
+      endpoints_permitidos: endpoints
+    })
+  });
+  
+  if (res.ok && data.success) {
+    toast('Usuario portal creado exitosamente', 'success');
+    closeModalUsuarioPortal();
+    loadUsuariosPortal();
+    loadStats();
+  } else {
+    toast(data.error || 'Error al crear usuario', 'error');
+  }
+}
+
+async function toggleUsuarioPortal(id, activar) {
+  const [res] = await apiFetch(`/api/admin/portal/usuarios/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ activo: activar })
+  });
+  if (res.ok) {
+    toast('Estado actualizado', 'success');
+    loadUsuariosPortal();
+  } else {
+    toast('Error al actualizar', 'error');
+  }
+}
+
+async function eliminarUsuarioPortal(id) {
+  if (!confirm('¿Desactivar este usuario? (No se eliminará permanentemente)')) return;
+  const [res] = await apiFetch(`/api/admin/portal/usuarios/${id}`, { method: 'DELETE' });
+  if (res.ok) {
+    toast('Usuario desactivado', 'success');
+    loadUsuariosPortal();
+    loadStats();
+  } else {
+    toast('Error al desactivar', 'error');
+  }
+}
+
+// ── Dashboard y Stats ────────────────────────────────────────
 async function loadStats() {
   const [, d] = await apiFetch('/api/admin/stats');
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="label">Solicitudes</div><div class="value accent">${d.total_solicitudes || 0}</div></div>
     <div class="stat-card"><div class="label">Pendientes</div><div class="value yellow">${d.pendientes || 0}</div></div>
-    <div class="stat-card"><div class="label">Tokens activos</div><div class="value green">${d.tokens_activos || 0}</div></div>
+    <div class="stat-card"><div class="label">Tokens API</div><div class="value green">${d.tokens_activos || 0}</div></div>
+    <div class="stat-card"><div class="label">Usuarios Portal</div><div class="value accent">${d.usuarios_portal || 0}</div></div>
     <div class="stat-card"><div class="label">Llamadas 24h</div><div class="value accent">${d.llamadas_24h || 0}</div></div>
     <div class="stat-card"><div class="label">IPs bloqueadas</div><div class="value red">${d.ips_bloqueadas || 0}</div></div>`;
   
@@ -460,6 +698,7 @@ async function loadStats() {
   }
 }
 
+// ── Solicitudes ──────────────────────────────────────────────
 async function loadSolicitudes() {
   const url = solFiltro ? `/api/admin/solicitudes?estado=${solFiltro}` : '/api/admin/solicitudes';
   const [, d] = await apiFetch(url);
@@ -469,11 +708,11 @@ async function loadSolicitudes() {
   tb.innerHTML = list.map(s => `
     <tr>
       <td>${s.id_solicitud}</td>
-      <td><strong>${s.nombre}</strong></td>
-      <td style="font-family:monospace;font-size:12px">${s.carnet || '—'}</td>
-      <td style="font-size:12px">${s.correo}</td>
-      <td>${s.numero_grupo || '—'}</td>
-      <td style="font-size:11px;max-width:160px;word-break:break-word">${s.apis_solicitadas || '—'}</td>
+      <td><strong>${escapeHtml(s.nombre)}</strong></td>
+      <td style="font-family:monospace;font-size:12px">${escapeHtml(s.carnet || '—')}</td>
+      <td style="font-size:12px">${escapeHtml(s.correo)}</td>
+      <td>${escapeHtml(s.numero_grupo || '—')}</td>
+      <td style="font-size:11px;max-width:160px;word-break:break-word">${escapeHtml(s.apis_solicitadas || '—')}</td>
       <td style="font-size:12px">${s.fecha_solicitud ? new Date(s.fecha_solicitud).toLocaleDateString() : '—'}</td>
       <td><span class="badge ${s.estado.toLowerCase()}">${s.estado}</span></td>
       <td>${s.estado === 'Pendiente' ? `<button class="btn btn-green" onclick="abrirAprobar(${s.id_solicitud})">✅ Aprobar</button>
@@ -493,96 +732,6 @@ function abrirAprobar(id) { solActual = id; document.getElementById('modal-aprob
 function abrirRechazar(id) { solActual = id; document.getElementById('modal-rechazar').classList.add('open'); }
 function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open')); solActual = null; }
 
-async function loadTokens() {
-  const [, d] = await apiFetch('/api/admin/tokens');
-  const list = d.tokens || [];
-  const tb = document.getElementById('tabla-tokens');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin tokens</td></tr>'; return; }
-  tb.innerHTML = list.map(t => `
-    <tr>
-      <td>${t.nombre_token}</td>
-      <td style="font-family:monospace;font-size:12px">${t.carnet || '—'}</td>
-      <td style="font-size:12px">${t.correo || '—'}</td>
-      <td>${t.numero_grupo || '—'}</td>
-      <td style="font-size:11px;max-width:150px;word-break:break-word">${t.apis_solicitadas || '—'}</td>
-      <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
-      <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
-      <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
-    </tr>
-  `).join('');
-}
-
-async function toggleToken(id) {
-  await apiFetch(`/api/admin/tokens/${id}/toggle`, { method: 'PATCH' });
-  loadTokens();
-}
-
-async function loadLogs() {
-  const [, d] = await apiFetch('/api/admin/logs?page=1');
-  const list = d.logs || [];
-  const tb = document.getElementById('tabla-logs');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin logs</td></tr>'; return; }
-  tb.innerHTML = list.map(l => `
-    <tr>
-      <td style="font-size:11px">${new Date(l.fecha_uso).toLocaleString()}</td>
-      <td>${l.nombre_usuario || '—'}</td>
-      <td><span class="badge aprobado">${l.metodo}</span></td>
-      <td class="mono" style="font-size:12px">${l.endpoint}</td>
-      <td class="mono" style="font-size:11px">${l.ip_publica || '—'}</td>
-      <td style="color:${l.exitoso ? 'var(--green)' : 'var(--red)'}">${l.codigo_respuesta}</td>
-    </tr>
-  `).join('');
-}
-
-async function loadIPs() {
-  const [, d] = await apiFetch('/api/admin/ips-bloqueadas');
-  const list = d.ips || [];
-  const tb = document.getElementById('tabla-ips');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
-  tb.innerHTML = list.filter(i => i.activo).map(i => `
-    <tr><td class="mono">${i.ip}</td><td>${i.motivo}</td><td>${new Date(i.fecha_bloqueo).toLocaleDateString()}</td>
-    <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">Desbloquear</button></td></tr>
-  `).join('');
-}
-
-async function desbloquearIP(id) {
-  await apiFetch(`/api/admin/ips-bloqueadas/${id}`, { method: 'DELETE' });
-  loadIPs();
-  toast('IP desbloqueada', 'success');
-}
-
-async function loadAlertas() {
-  const [, d] = await apiFetch('/api/admin/alertas');
-  const list = d.alertas || [];
-  const tb = document.getElementById('tabla-alertas');
-  if (!list.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Sin alertas</td></tr>'; return; }
-  tb.innerHTML = list.map(a => `
-    <tr><td><span class="badge pendiente">${a.tipo}</span></td><td>${a.descripcion}</td>
-    <td style="font-size:12px">${new Date(a.fecha_alerta).toLocaleString()}</td></tr>
-  `).join('');
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  verificarAdmin();
-  document.getElementById('admin-password')?.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') loginAdmin();
-  });
-});
-</script>
-
-<!-- Modales -->
-<div class="modal-overlay" id="modal-aprobar"><div class="modal"><div class="modal-header"><span>Aprobar solicitud</span><button onclick="closeModal()">✕</button></div>
-<div class="modal-body"><div class="field"><label>Límite diario</label><input type="number" id="max-req" value="1000"></div>
-<div class="field"><label>Permiso escritura</label><input type="checkbox" id="perm-escribir"></div></div>
-<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-<button class="btn btn-green" onclick="confirmarAprobacion()">Aprobar</button></div></div></div>
-
-<div class="modal-overlay" id="modal-rechazar"><div class="modal"><div class="modal-header"><span>Rechazar solicitud</span><button onclick="closeModal()">✕</button></div>
-<div class="modal-body"><div class="field"><label>Motivo</label><textarea id="notas-rechazar" rows="3"></textarea></div></div>
-<div class="modal-footer"><button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
-<button class="btn btn-red" onclick="confirmarRechazo()">Rechazar</button></div></div></div>
-
-<script>
 async function confirmarAprobacion() {
   if (!solActual) return;
   const body = { puede_leer: true, puede_escribir: document.getElementById('perm-escribir').checked, max_requests_dia: parseInt(document.getElementById('max-req').value) };
@@ -596,6 +745,86 @@ async function confirmarRechazo() {
   await apiFetch(`/api/admin/solicitudes/${solActual}/rechazar`, { method: 'POST', body: JSON.stringify({ notas }) });
   closeModal(); loadSolicitudes(); loadStats(); toast('Solicitud rechazada', 'success');
 }
+
+// ── Tokens API ───────────────────────────────────────────────
+async function loadTokens() {
+  const [, d] = await apiFetch('/api/admin/tokens');
+  const list = d.tokens || [];
+  const tb = document.getElementById('tabla-tokens');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin tokens</td></tr>'; return; }
+  tb.innerHTML = list.map(t => `
+    <tr>
+      <td>${escapeHtml(t.nombre_token)}</td>
+      <td style="font-family:monospace;font-size:12px">${escapeHtml(t.carnet || '—')}</td>
+      <td style="font-size:12px">${escapeHtml(t.correo || '—')}</td>
+      <td>${escapeHtml(t.numero_grupo || '—')}</td>
+      <td style="font-size:11px;max-width:150px;word-break:break-word">${escapeHtml(t.apis_solicitadas || '—')}</td>
+      <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
+      <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
+      <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
+    </tr>
+  `).join('');
+}
+
+async function toggleToken(id) {
+  await apiFetch(`/api/admin/tokens/${id}/toggle`, { method: 'PATCH' });
+  loadTokens();
+}
+
+// ── Logs ─────────────────────────────────────────────────────
+async function loadLogs() {
+  const [, d] = await apiFetch('/api/admin/logs?page=1');
+  const list = d.logs || [];
+  const tb = document.getElementById('tabla-logs');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">Sin logs</td></tr>'; return; }
+  tb.innerHTML = list.map(l => `
+    <tr>
+      <td style="font-size:11px">${l.fecha_uso ? new Date(l.fecha_uso).toLocaleString() : '—'}</td>
+      <td>${escapeHtml(l.nombre_usuario || '—')}</td>
+      <td><span class="badge aprobado">${l.metodo}</span></td>
+      <td class="mono" style="font-size:12px">${l.endpoint}</td>
+      <td class="mono" style="font-size:11px">${l.ip_publica || '—'}</td>
+      <td style="color:${l.exitoso ? 'var(--green)' : 'var(--red)'}">${l.codigo_respuesta}</td>
+    </tr>
+  `).join('');
+}
+
+// ── IPs Bloqueadas ───────────────────────────────────────────
+async function loadIPs() {
+  const [, d] = await apiFetch('/api/admin/ips-bloqueadas');
+  const list = d.ips || [];
+  const tb = document.getElementById('tabla-ips');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
+  tb.innerHTML = list.filter(i => i.activo).map(i => `
+    <tr><td class="mono">${i.ip}</td><td>${escapeHtml(i.motivo)}</td><td>${i.fecha_bloqueo ? new Date(i.fecha_bloqueo).toLocaleDateString() : '—'}</td>
+    <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">Desbloquear</button></td></tr>
+  `).join('');
+}
+
+async function desbloquearIP(id) {
+  await apiFetch(`/api/admin/ips-bloqueadas/${id}`, { method: 'DELETE' });
+  loadIPs();
+  toast('IP desbloqueada', 'success');
+}
+
+// ── Alertas ──────────────────────────────────────────────────
+async function loadAlertas() {
+  const [, d] = await apiFetch('/api/admin/alertas');
+  const list = d.alertas || [];
+  const tb = document.getElementById('tabla-alertas');
+  if (!list.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Sin alertas</td></tr>'; return; }
+  tb.innerHTML = list.map(a => `
+    <tr><td><span class="badge pendiente">${escapeHtml(a.tipo)}</span></td><td>${escapeHtml(a.descripcion)}</td>
+    <td style="font-size:12px">${a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleString() : '—'}</td></tr>
+  `).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  verificarAdmin();
+  document.getElementById('admin-password')?.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') loginAdmin();
+  });
+});
 </script>
 </body>
 </html>
