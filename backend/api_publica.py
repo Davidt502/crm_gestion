@@ -632,7 +632,7 @@ curl -H "X-API-Token: {nuevo_token[:20]}..." \\
 # ══════════════════════════════════════════════════════════════
 
 def _solo_admin():
-    user = getattr(request, "current_user", {}) or {}
+    user = getattr(g, "current_user", {}) or {}
     username = user.get("username", "")
 
     if not username:
