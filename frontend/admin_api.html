@@ -387,6 +387,12 @@ async function apiFetch(url, opts = {}) {
   } catch(e) {
     data = { error: 'Error al parsear respuesta' };
   }
+  // Si el servidor responde 401, limpiar sesión y forzar re-login
+  if (res.status === 401) {
+    localStorage.removeItem(CONFIG.TOKEN_KEY);
+    localStorage.removeItem(CONFIG.USER_KEY);
+    verificarAdmin();
+  }
   return [res, data];
 }
 
@@ -558,7 +564,8 @@ async function loadUsuariosPortal() {
   try {
     const [res, data] = await apiFetch('/api/admin/portal/usuarios');
     if (!res.ok) {
-      console.error('Error loading portal users:', data);
+      const tb = document.getElementById('tabla-usuarios-portal');
+      tb.innerHTML = `<tr><td colspan="7" class="empty">Error al cargar usuarios: ${data.error || res.status}</td></tr>`;
       return;
     }
     const tb = document.getElementById('tabla-usuarios-portal');
@@ -754,14 +761,15 @@ async function loadTokens() {
     const [, d] = await apiFetch('/api/admin/tokens');
     const list = d.tokens || [];
     const tb = document.getElementById('tabla-tokens');
-    if (!list.length) { tb.innerHTML = '<tr><td colspan="7" class="empty">Sin tokens</td></tr>'; return; }
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="8" class="empty">Sin tokens</td></tr>'; return; }
     tb.innerHTML = list.map(t => `
       <tr>
         <td>${escapeHtml(t.nombre_token)}</td>
-        <td style="font-family:monospace;font-size:12px">${escapeHtml(t.token_preview)}</td>
-        <td>${t.total_usos || 0}</td>
-        <td>${t.max_requests_dia || '∞'}</td>
-        <td style="font-size:12px">${t.fecha_creacion ? new Date(t.fecha_creacion).toLocaleDateString() : '—'}</td>
+        <td style="font-family:monospace;font-size:12px">${escapeHtml(t.carnet || '—')}</td>
+        <td style="font-size:12px">${escapeHtml(t.correo_solicitante || '—')}</td>
+        <td>${escapeHtml(t.numero_grupo || '—')}</td>
+        <td style="font-size:11px;max-width:150px;word-break:break-word">${escapeHtml(t.apis_solicitadas || '—')}</td>
+        <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
         <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
         <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
       </tr>
@@ -796,7 +804,7 @@ async function loadLogs() {
         <td class="mono" style="font-size:12px">${l.endpoint || '—'}</td>
         <td class="mono" style="font-size:11px">${l.ip_publica || '—'}</td>
         <td style="color:${l.codigo_respuesta && l.codigo_respuesta < 400 ? 'var(--green)' : 'var(--red)'}">${l.codigo_respuesta || '—'}</td>
-      </table>
+      </tr>
     `).join('');
   } catch(e) {
     console.error('Error loading logs:', e);
