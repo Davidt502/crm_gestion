@@ -1,5 +1,6 @@
 """
 api_publica.py - Portal de API pública con control total de admin
+(CORREGIDO - eliminada referencia a columna 'activo' que no existe)
 """
 import secrets, json, logging, smtplib, os, time, jwt
 from functools import wraps
@@ -114,7 +115,7 @@ def _solo_admin():
         try:
             with db_connection() as (conn, cursor):
                 cursor.execute(
-                    "SELECT rol, username FROM usuarios WHERE username = %s AND activo = TRUE",
+                    "SELECT rol, username FROM usuarios WHERE username = %s",
                     [username]
                 )
                 row = cursor.fetchone()
@@ -129,7 +130,7 @@ def _solo_admin():
     try:
         with db_connection() as (conn, cursor):
             cursor.execute(
-                "SELECT rol FROM usuarios WHERE username = %s AND activo = TRUE",
+                "SELECT rol FROM usuarios WHERE username = %s",
                 [username]
             )
             row = cursor.fetchone()
@@ -272,18 +273,18 @@ def portal_login():
     try:
         with db_connection() as (conn, cursor):
             cursor.execute("""
-                SELECT u.id_usuario, u.username, u.password_hash, u.nombre, u.activo,
+                SELECT u.id_usuario, u.username, u.password_hash, u.nombre,
                        u.rol, up.endpoints_permitidos, up.max_requests_dia
                 FROM usuarios u
                 LEFT JOIN portal_usuarios up ON u.id_usuario = up.id_usuario
-                WHERE u.username = %s AND u.activo = TRUE
+                WHERE u.username = %s
             """, [username])
             row = cursor.fetchone()
             
             if not row or not check_password_hash(row[2], password):
                 return jsonify({"error": "Credenciales inválidas"}), 401
             
-            id_usuario, username_db, password_hash, nombre, activo, rol, endpoints, max_req = row
+            id_usuario, username_db, password_hash, nombre, rol, endpoints, max_req = row
             
             # Generar token JWT específico para portal
             token = jwt.encode({
@@ -355,7 +356,6 @@ def listar_usuarios_portal():
                     u.username, 
                     u.nombre, 
                     u.email, 
-                    u.activo,
                     u.fecha_creacion,
                     COALESCE(up.endpoints_permitidos, '[]') as endpoints_permitidos,
                     COALESCE(up.max_requests_dia, 500) as max_requests_dia,
@@ -425,8 +425,8 @@ def crear_usuario_portal():
             # Crear usuario
             password_hash = generate_password_hash(password)
             cursor.execute("""
-                INSERT INTO usuarios (username, password_hash, nombre, email, rol, activo)
-                VALUES (%s, %s, %s, %s, 'portal', TRUE)
+                INSERT INTO usuarios (username, password_hash, nombre, email, rol)
+                VALUES (%s, %s, %s, %s, 'portal')
                 RETURNING id_usuario
             """, [username, password_hash, nombre, email])
             id_usuario = cursor.fetchone()[0]
@@ -486,9 +486,6 @@ def actualizar_usuario_portal(id_usuario):
     
     try:
         with db_connection() as (conn, cursor):
-            if "activo" in data:
-                cursor.execute("UPDATE usuarios SET activo = %s WHERE id_usuario = %s", 
-                              [data["activo"], id_usuario])
             if "max_requests_dia" in data:
                 cursor.execute("UPDATE portal_usuarios SET max_requests_dia = %s WHERE id_usuario = %s", 
                               [data["max_requests_dia"], id_usuario])
@@ -504,16 +501,19 @@ def actualizar_usuario_portal(id_usuario):
 @api_publica_bp.route("/api/admin/portal/usuarios/<int:id_usuario>", methods=["DELETE"])
 @token_required
 def eliminar_usuario_portal(id_usuario):
-    """Eliminar usuario portal (solo admin)"""
+    """Eliminar/desactivar usuario portal (solo admin)"""
     es_admin, _ = _solo_admin()
     if not es_admin:
         return jsonify({"error": "Solo administradores"}), 403
     
     try:
         with db_connection() as (conn, cursor):
-            # Desactivar en lugar de eliminar
-            cursor.execute("UPDATE usuarios SET activo = FALSE WHERE id_usuario = %s", [id_usuario])
-        return jsonify({"success": True, "mensaje": "Usuario desactivado"})
+            # Verificar si existe en portal_usuarios
+            cursor.execute("SELECT 1 FROM portal_usuarios WHERE id_usuario = %s", [id_usuario])
+            if cursor.fetchone():
+                cursor.execute("DELETE FROM portal_usuarios WHERE id_usuario = %s", [id_usuario])
+            cursor.execute("DELETE FROM usuarios WHERE id_usuario = %s", [id_usuario])
+        return jsonify({"success": True, "mensaje": "Usuario eliminado"})
     except Exception as exc:
         logger.error("eliminar_usuario_portal: %s", exc, exc_info=True)
         return jsonify({"error": "Error al eliminar"}), 500
