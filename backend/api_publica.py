@@ -481,7 +481,7 @@ def crear_usuario_portal():
 @api_publica_bp.route("/api/admin/portal/usuarios/<int:id_usuario>", methods=["PUT"])
 @token_required
 def actualizar_usuario_portal(id_usuario):
-    """Actualizar usuario portal (solo admin)"""
+    """Actualizar usuario portal (solo admin) — soporta password, nombre, email, endpoints, max_requests, activo"""
     es_admin, _ = _solo_admin()
     if not es_admin:
         return jsonify({"error": "Solo administradores"}), 403
@@ -490,17 +490,44 @@ def actualizar_usuario_portal(id_usuario):
     
     try:
         with db_connection() as (conn, cursor):
+            # ── Cambio de contraseña (opcional) ──────────────────
+            if "password" in data:
+                nueva_pass = str(data["password"]).strip()
+                if len(nueva_pass) < 6:
+                    return jsonify({"error": "La contraseña debe tener al menos 6 caracteres"}), 400
+                nuevo_hash = generate_password_hash(nueva_pass)
+                cursor.execute(
+                    "UPDATE usuarios SET password_hash = %s WHERE id_usuario = %s",
+                    [nuevo_hash, id_usuario]
+                )
+            # ── Nombre y email ────────────────────────────────────
+            if "nombre" in data:
+                cursor.execute(
+                    "UPDATE usuarios SET nombre = %s WHERE id_usuario = %s",
+                    [str(data["nombre"]).strip(), id_usuario]
+                )
+            if "email" in data:
+                cursor.execute(
+                    "UPDATE usuarios SET email = %s WHERE id_usuario = %s",
+                    [str(data["email"]).strip(), id_usuario]
+                )
+            # ── Configuración portal ──────────────────────────────
             if "max_requests_dia" in data:
-                cursor.execute("UPDATE portal_usuarios SET max_requests_dia = %s WHERE id_usuario = %s", 
-                              [data["max_requests_dia"], id_usuario])
+                cursor.execute(
+                    "UPDATE portal_usuarios SET max_requests_dia = %s WHERE id_usuario = %s",
+                    [data["max_requests_dia"], id_usuario]
+                )
             if "endpoints_permitidos" in data:
-                cursor.execute("UPDATE portal_usuarios SET endpoints_permitidos = %s WHERE id_usuario = %s",
-                              [json.dumps(data["endpoints_permitidos"]), id_usuario])
+                cursor.execute(
+                    "UPDATE portal_usuarios SET endpoints_permitidos = %s WHERE id_usuario = %s",
+                    [json.dumps(data["endpoints_permitidos"]), id_usuario]
+                )
             if "activo" in data:
-                # La tabla usuarios usa columna 'estado' ('Activo'/'Inactivo'), no 'activo'
                 nuevo_estado = "Activo" if data["activo"] else "Inactivo"
-                cursor.execute("UPDATE usuarios SET estado = %s WHERE id_usuario = %s",
-                              [nuevo_estado, id_usuario])
+                cursor.execute(
+                    "UPDATE usuarios SET estado = %s WHERE id_usuario = %s",
+                    [nuevo_estado, id_usuario]
+                )
         
         return jsonify({"success": True, "mensaje": "Usuario actualizado"})
     except Exception as exc:

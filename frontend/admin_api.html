@@ -359,9 +359,12 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
         <label>Usuario *</label>
         <input type="text" id="portal-username" placeholder="usuario (mínimo 3 caracteres)">
       </div>
-      <div class="field">
-        <label>Contraseña *</label>
+      <div class="field" id="portal-password-field">
+        <label id="portal-password-label">Contraseña *</label>
         <input type="password" id="portal-password" placeholder="mínimo 6 caracteres">
+        <small id="portal-password-hint" style="display:none;color:var(--muted);font-size:11px;margin-top:4px;">
+          Dejar en blanco para no cambiar la contraseña actual.
+        </small>
       </div>
       <div class="field">
         <label>Nombre completo *</label>
@@ -386,7 +389,7 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModalUsuarioPortal()">Cancelar</button>
-      <button class="btn btn-primary" onclick="crearUsuarioPortal()">Crear Usuario</button>
+      <button class="btn btn-primary" id="btn-guardar-usuario" onclick="guardarUsuarioPortal()">Crear Usuario</button>
     </div>
   </div>
 </div>
@@ -652,6 +655,7 @@ async function loadUsuariosPortal() {
         <td style="font-size:10px;max-width:180px;">${(u.endpoints_permitidos || []).map(e => e.split('/').pop()).join('<br>')}</td>
         <td>${u.max_requests_dia || 500}</td>
         <td>
+          <button class="btn btn-ghost" onclick="editarUsuarioPortal(${u.id_usuario}, ${JSON.stringify(u).replace(/'/g, '&#39;')})" style="padding:4px 8px;font-size:10px;">✏️ Editar</button>
           <button class="btn btn-red" onclick="eliminarUsuarioPortal(${u.id_usuario})" style="padding:4px 8px;font-size:10px;">🗑 Eliminar</button>
         </td>
       </tr>
@@ -671,65 +675,106 @@ function escapeHtml(str) {
   });
 }
 
+// Estado del modal de usuario (null = crear, número = id del usuario a editar)
+let _editandoUsuarioId = null;
+
 function abrirModalUsuarioPortal() {
-  document.getElementById('modal-usuario-portal').classList.add('open');
+  _editandoUsuarioId = null;
+  document.getElementById('modal-usuario-title').textContent = 'Nuevo Usuario Portal';
+  document.getElementById('btn-guardar-usuario').textContent = 'Crear Usuario';
   document.getElementById('portal-username').value = '';
+  document.getElementById('portal-username').disabled = false;
   document.getElementById('portal-password').value = '';
+  document.getElementById('portal-password').placeholder = 'mínimo 6 caracteres';
+  document.getElementById('portal-password-label').textContent = 'Contraseña *';
+  document.getElementById('portal-password-hint').style.display = 'none';
   document.getElementById('portal-nombre').value = '';
   document.getElementById('portal-email').value = '';
   document.getElementById('portal-max-req').value = '500';
   document.querySelectorAll('#portal-apis input').forEach(cb => cb.checked = true);
+  document.getElementById('modal-usuario-portal').classList.add('open');
+}
+
+function editarUsuarioPortal(id, usuario) {
+  _editandoUsuarioId = id;
+  document.getElementById('modal-usuario-title').textContent = 'Editar Usuario Portal';
+  document.getElementById('btn-guardar-usuario').textContent = 'Guardar cambios';
+  // Usuario no se puede cambiar (es la llave de la cuenta)
+  document.getElementById('portal-username').value = usuario.username || '';
+  document.getElementById('portal-username').disabled = true;
+  // Contraseña opcional en edición
+  document.getElementById('portal-password').value = '';
+  document.getElementById('portal-password').placeholder = 'Dejar en blanco para no cambiar';
+  document.getElementById('portal-password-label').textContent = 'Nueva contraseña (opcional)';
+  document.getElementById('portal-password-hint').style.display = 'block';
+  document.getElementById('portal-nombre').value = usuario.nombre || '';
+  document.getElementById('portal-email').value = usuario.email || '';
+  document.getElementById('portal-max-req').value = usuario.max_requests_dia || 500;
+  const endpointsActivos = usuario.endpoints_permitidos || [];
+  document.querySelectorAll('#portal-apis input').forEach(cb => {
+    cb.checked = endpointsActivos.includes(cb.value);
+  });
+  document.getElementById('modal-usuario-portal').classList.add('open');
 }
 
 function closeModalUsuarioPortal() {
   document.getElementById('modal-usuario-portal').classList.remove('open');
+  document.getElementById('portal-username').disabled = false;
+  _editandoUsuarioId = null;
 }
 
-async function crearUsuarioPortal() {
-  const username = document.getElementById('portal-username').value.trim();
+async function guardarUsuarioPortal() {
   const password = document.getElementById('portal-password').value;
   const nombre = document.getElementById('portal-nombre').value.trim();
   const email = document.getElementById('portal-email').value.trim();
   const maxReqs = parseInt(document.getElementById('portal-max-req').value) || 500;
   const endpoints = Array.from(document.querySelectorAll('#portal-apis input:checked')).map(cb => cb.value);
-  
-  if (!username || username.length < 3) {
-    toast('Usuario debe tener al menos 3 caracteres', 'error');
-    return;
-  }
-  if (!password || password.length < 6) {
-    toast('Contraseña debe tener al menos 6 caracteres', 'error');
-    return;
-  }
-  if (!nombre) {
-    toast('Nombre es requerido', 'error');
-    return;
-  }
-  if (!email) {
-    toast('Email es requerido', 'error');
-    return;
-  }
-  if (!endpoints.length) {
-    toast('Selecciona al menos una API', 'error');
-    return;
-  }
-  
-  const [res, data] = await apiFetch('/api/admin/portal/usuarios', {
-    method: 'POST',
-    body: JSON.stringify({
-      username, password, nombre, email,
-      max_requests_dia: maxReqs,
-      endpoints_permitidos: endpoints
-    })
-  });
-  
-  if (res.ok && data.success) {
-    toast('Usuario portal creado exitosamente', 'success');
-    closeModalUsuarioPortal();
-    loadUsuariosPortal();
-    loadStats();
+
+  if (_editandoUsuarioId) {
+    // ── EDITAR ──────────────────────────────────────────────
+    if (password && password.length < 6) {
+      toast('La nueva contraseña debe tener al menos 6 caracteres', 'error');
+      return;
+    }
+    if (!nombre) { toast('Nombre es requerido', 'error'); return; }
+    if (!email)  { toast('Email es requerido', 'error'); return; }
+    if (!endpoints.length) { toast('Selecciona al menos una API', 'error'); return; }
+
+    const body = { nombre, email, max_requests_dia: maxReqs, endpoints_permitidos: endpoints };
+    if (password) body.password = password;  // solo enviar si se llenó
+
+    const [res, data] = await apiFetch(`/api/admin/portal/usuarios/${_editandoUsuarioId}`, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
+    if (res.ok && data.success) {
+      toast('Usuario actualizado exitosamente', 'success');
+      closeModalUsuarioPortal();
+      loadUsuariosPortal();
+    } else {
+      toast(data.error || 'Error al actualizar usuario', 'error');
+    }
   } else {
-    toast(data.error || 'Error al crear usuario', 'error');
+    // ── CREAR ───────────────────────────────────────────────
+    const username = document.getElementById('portal-username').value.trim();
+    if (!username || username.length < 3) { toast('Usuario debe tener al menos 3 caracteres', 'error'); return; }
+    if (!password || password.length < 6) { toast('Contraseña debe tener al menos 6 caracteres', 'error'); return; }
+    if (!nombre)   { toast('Nombre es requerido', 'error'); return; }
+    if (!email)    { toast('Email es requerido', 'error'); return; }
+    if (!endpoints.length) { toast('Selecciona al menos una API', 'error'); return; }
+
+    const [res, data] = await apiFetch('/api/admin/portal/usuarios', {
+      method: 'POST',
+      body: JSON.stringify({ username, password, nombre, email, max_requests_dia: maxReqs, endpoints_permitidos: endpoints })
+    });
+    if (res.ok && data.success) {
+      toast('Usuario portal creado exitosamente', 'success');
+      closeModalUsuarioPortal();
+      loadUsuariosPortal();
+      loadStats();
+    } else {
+      toast(data.error || 'Error al crear usuario', 'error');
+    }
   }
 }
 
