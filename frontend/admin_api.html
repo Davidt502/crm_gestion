@@ -460,11 +460,15 @@ async function apiFetch(url, opts = {}) {
   } catch(e) {
     data = { error: 'Error al parsear respuesta' };
   }
-  // Si el servidor responde 401, limpiar sesión y forzar re-login
+  // 401: token expirado o inválido — limpiar sesión y mostrar login
   if (res.status === 401) {
     localStorage.removeItem(CONFIG.TOKEN_KEY);
     localStorage.removeItem(CONFIG.USER_KEY);
     verificarAdmin();
+  }
+  // 429: rate limit — devolver respuesta sin logout, el caller decide qué mostrar
+  if (res.status === 429) {
+    data = { error: 'Demasiadas solicitudes. El servidor limitó el acceso temporalmente. Espera unos segundos y vuelve a intentar.' };
   }
   return [res, data];
 }
@@ -489,35 +493,73 @@ async function verificarAdmin() {
   return true;
 }
 
+// Contador de intentos fallidos para backoff en 429
+let _loginAttempts = 0;
+let _loginBlockedUntil = 0;
+
 async function loginAdmin() {
   const username = document.getElementById('admin-username').value.trim();
   const password = document.getElementById('admin-password').value;
   const alertDiv = document.getElementById('auth-admin-alert');
-  
+  const btn = document.querySelector('#auth-admin-screen .btn');
+
   if (!username || !password) {
     alertDiv.textContent = 'Usuario y contraseña son requeridos.';
     alertDiv.style.display = 'block';
     return;
   }
-  
+
+  // Bloqueo local si ya hubo muchos 429
+  const now = Date.now();
+  if (_loginBlockedUntil > now) {
+    const segs = Math.ceil((_loginBlockedUntil - now) / 1000);
+    alertDiv.textContent = `Demasiados intentos. Espera ${segs}s antes de volver a intentar.`;
+    alertDiv.style.display = 'block';
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Accediendo...'; }
+
   try {
     const res = await fetch(`${CONFIG.API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    
-    const data = await res.json();
-    
+
+    // 429 — rate limit del servidor
+    if (res.status === 429) {
+      _loginAttempts++;
+      // Backoff exponencial: 30s, 60s, 120s (máx)
+      const wait = Math.min(30 * Math.pow(2, _loginAttempts - 1), 120);
+      _loginBlockedUntil = Date.now() + wait * 1000;
+      alertDiv.textContent = `Demasiados intentos de acceso. El servidor te bloqueó temporalmente. Intenta de nuevo en ${wait} segundos.`;
+      alertDiv.style.display = 'block';
+      // Contador regresivo en el botón
+      let remaining = wait;
+      const countdown = setInterval(() => {
+        remaining--;
+        if (btn) btn.textContent = `Espera ${remaining}s...`;
+        if (remaining <= 0) {
+          clearInterval(countdown);
+          if (btn) { btn.disabled = false; btn.textContent = '🔓 Acceder como Admin'; }
+        }
+      }, 1000);
+      return;
+    }
+
+    let data = {};
+    try { data = await res.json(); } catch(e) {}
+
     if (res.ok && data.token) {
       const user = data.user || {};
-      
       if (user.rol !== 'admin') {
         alertDiv.textContent = 'Acceso denegado. Solo administradores pueden usar este panel.';
         alertDiv.style.display = 'block';
         return;
       }
-      
+      _loginAttempts = 0;
+      _loginBlockedUntil = 0;
       localStorage.setItem(CONFIG.TOKEN_KEY, data.token);
       localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(user));
       alertDiv.style.display = 'none';
@@ -526,12 +568,17 @@ async function loginAdmin() {
       verificarAdmin();
       toast('Bienvenido al panel de administración', 'success');
     } else {
+      _loginAttempts++;
       alertDiv.textContent = data.error || 'Usuario o contraseña incorrectos.';
       alertDiv.style.display = 'block';
     }
   } catch (e) {
-    alertDiv.textContent = 'Error de conexión.';
+    alertDiv.textContent = 'Error de conexión. El servidor puede estar iniciando (Render free tier), intenta en unos segundos.';
     alertDiv.style.display = 'block';
+  } finally {
+    if (_loginBlockedUntil <= Date.now()) {
+      if (btn) { btn.disabled = false; btn.textContent = '🔓 Acceder como Admin'; }
+    }
   }
 }
 
@@ -1175,20 +1222,49 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter') loginAdmin();
   });
 
-  // Auto-refresh de alertas cada 60 segundos para notificar badge
-  setInterval(async () => {
-    const token = localStorage.getItem(CONFIG.TOKEN_KEY);
-    if (!token) return;
-    try {
-      const [, d] = await apiFetch('/api/admin/alertas');
-      const count = (d.alertas || []).length;
-      const badge = document.getElementById('badge-alertas');
-      if (badge) {
-        badge.style.display = count > 0 ? 'inline-block' : 'none';
-        badge.textContent = count > 99 ? '99+' : count;
+  // Auto-refresh de alertas cada 60 segundos para notificar badge.
+  // Protecciones:
+  //   - No ejecutar si no hay sesión activa
+  //   - No ejecutar si apiFetch borró el token (401 → verificarAdmin ya lo maneja)
+  //   - Ignorar errores de red (Render hibernado, QUIC, ERR_INTERNET_DISCONNECTED)
+  //     sin llamar a verificarAdmin() para no forzar logout por caída de red
+  let _alertIntervalId = null;
+  function iniciarAutoRefreshAlertas() {
+    if (_alertIntervalId) clearInterval(_alertIntervalId);
+    _alertIntervalId = setInterval(async () => {
+      // Si se cerró sesión desde otro lugar, detener el intervalo
+      const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+      if (!token) { clearInterval(_alertIntervalId); _alertIntervalId = null; return; }
+      try {
+        const res = await fetch(CONFIG.API_BASE_URL + '/api/admin/alertas', {
+          headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+        });
+        // 401: token expirado — limpiar sesión (igual que apiFetch)
+        if (res.status === 401) {
+          localStorage.removeItem(CONFIG.TOKEN_KEY);
+          localStorage.removeItem(CONFIG.USER_KEY);
+          clearInterval(_alertIntervalId); _alertIntervalId = null;
+          verificarAdmin();
+          return;
+        }
+        // 429: servidor con rate limit — no reintentar, simplemente saltar este tick
+        if (res.status === 429) return;
+        // Cualquier otro error HTTP o red: saltar sin logout
+        if (!res.ok) return;
+        const d = await res.json();
+        const count = (d.alertas || []).length;
+        const badge = document.getElementById('badge-alertas');
+        if (badge) {
+          badge.style.display = count > 0 ? 'inline-block' : 'none';
+          badge.textContent = count > 99 ? '99+' : count;
+        }
+      } catch(e) {
+        // ERR_INTERNET_DISCONNECTED, ERR_QUIC_PROTOCOL_ERROR, etc.
+        // No hacer nada — el intervalo seguirá al próximo tick cuando vuelva la red
       }
-    } catch(e) { /* silently ignore */ }
-  }, 60000);
+    }, 60000);
+  }
+  iniciarAutoRefreshAlertas();
 });
 </script>
 </body>
