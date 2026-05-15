@@ -127,8 +127,8 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
     <div class="nav-item" onclick="goTo('solicitudes',this)">📋 Solicitudes <span class="badge" id="badge-pendientes">0</span></div>
     <div class="nav-item" onclick="goTo('tokens',this)">🔑 Tokens API</div>
     <div class="nav-item" onclick="goTo('logs',this)">📜 Logs</div>
-    <div class="nav-item" onclick="goTo('ips',this)">🚫 IPs bloqueadas</div>
-    <div class="nav-item" onclick="goTo('alertas',this)">⚠️ Alertas</div>
+    <div class="nav-item" onclick="goTo('ips',this)">🚫 Monitor de IPs</div>
+    <div class="nav-item" onclick="goTo('alertas',this)">⚠️ Alertas <span class="badge" id="badge-alertas" style="background:var(--yellow);display:none;">!</span></div>
     <div class="nav-item" onclick="cerrarSesionAdmin()" style="margin-top:auto;color:var(--red);">🚪 Cerrar sesión</div>
   </nav>
 </div>
@@ -255,21 +255,61 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
 
   <!-- IPs bloqueadas -->
   <div class="page" id="page-ips">
-    <div class="page-header"><div><div class="page-title">IPs bloqueadas</div></div></div>
-    <div class="table-wrap">
-      <table>
-        <thead><tr><th>IP</th><th>Motivo</th><th>Fecha</th><th>Acción</th></tr></thead>
-        <tbody id="tabla-ips"></tbody>
-      </table>
+    <div class="page-header">
+      <div><div class="page-title">Monitor de IPs</div></div>
+      <button class="btn btn-ghost" onclick="loadIPs()">↻ Actualizar</button>
+    </div>
+
+    <!-- IPs activas / conectadas -->
+    <div style="margin-bottom:28px;">
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--green);display:inline-block;box-shadow:0 0 6px var(--green);"></span>
+        Usuarios conectados recientemente (últimas 24h)
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>IP</th><th>Usuario</th><th>Último endpoint</th><th>Últ. actividad</th><th>Llamadas hoy</th><th>Estado</th><th>Acciones</th></tr></thead>
+          <tbody id="tabla-ips-activas"><tr><td colspan="7" class="empty">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- IPs bloqueadas -->
+    <div>
+      <div style="font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+        <span style="color:var(--red);">🚫</span> IPs bloqueadas
+        <button class="btn btn-red" style="margin-left:auto;padding:6px 14px;font-size:11px;" onclick="abrirModalBloquearIP()">+ Bloquear IP manualmente</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>IP</th><th>Motivo</th><th>Fecha bloqueo</th><th>Acción</th></tr></thead>
+          <tbody id="tabla-ips"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
   <!-- Alertas -->
   <div class="page" id="page-alertas">
-    <div class="page-header"><div><div class="page-title">Alertas</div></div></div>
+    <div class="page-header">
+      <div><div class="page-title">Centro de Alertas</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost" onclick="marcarTodasLeidas()">✓ Marcar todas como leídas</button>
+        <button class="btn btn-ghost" onclick="loadAlertas()">↻ Actualizar</button>
+      </div>
+    </div>
+
+    <!-- Resumen de alertas -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:24px;" id="alertas-resumen">
+      <div class="stat-card"><div class="label">Total alertas</div><div class="value yellow" id="alerta-total">—</div></div>
+      <div class="stat-card"><div class="label">Exceso de requests</div><div class="value red" id="alerta-rate">—</div></div>
+      <div class="stat-card"><div class="label">IPs sospechosas</div><div class="value red" id="alerta-ip">—</div></div>
+      <div class="stat-card"><div class="label">Errores 500</div><div class="value yellow" id="alerta-err">—</div></div>
+    </div>
+
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Tipo</th><th>Descripción</th><th>Fecha</th></tr></thead>
+        <thead><tr><th>Severidad</th><th>Tipo</th><th>Descripción</th><th>IP</th><th>Fecha</th><th>Acciones</th></tr></thead>
         <tbody id="tabla-alertas"></tbody>
       </table>
     </div>
@@ -347,6 +387,36 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModalUsuarioPortal()">Cancelar</button>
       <button class="btn btn-primary" onclick="crearUsuarioPortal()">Crear Usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Bloquear IP manualmente -->
+<div class="modal-overlay" id="modal-bloquear-ip">
+  <div class="modal">
+    <div class="modal-header"><span>🚫 Bloquear IP</span><button onclick="document.getElementById('modal-bloquear-ip').classList.remove('open')">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Dirección IP *</label><input type="text" id="bloquear-ip-valor" placeholder="192.168.1.100"></div>
+      <div class="field"><label>Motivo *</label><textarea id="bloquear-ip-motivo" rows="3" placeholder="Describe el motivo del bloqueo..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-bloquear-ip').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarBloqueoIP()">🚫 Bloquear IP</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Confirmar eliminación token -->
+<div class="modal-overlay" id="modal-eliminar-token">
+  <div class="modal">
+    <div class="modal-header"><span>🗑 Eliminar usuario/token</span><button onclick="document.getElementById('modal-eliminar-token').classList.remove('open')">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--muted);font-size:13px;line-height:1.6;">Esta acción eliminará permanentemente el token y el usuario asociado. El estudiante ya no podrá acceder a la API.</p>
+      <p style="color:var(--red);font-size:13px;font-weight:700;margin-top:12px;">¿Estás seguro? Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-eliminar-token').classList.remove('open')">Cancelar</button>
+      <button class="btn btn-red" onclick="confirmarEliminarToken()">🗑 Sí, eliminar todo</button>
     </div>
   </div>
 </div>
@@ -756,6 +826,8 @@ async function confirmarRechazo() {
 }
 
 // ── Tokens API ───────────────────────────────────────────────
+let tokenParaEliminar = null;
+
 async function loadTokens() {
   try {
     const [, d] = await apiFetch('/api/admin/tokens');
@@ -771,11 +843,38 @@ async function loadTokens() {
         <td style="font-size:11px;max-width:150px;word-break:break-word">${escapeHtml(t.apis_solicitadas || '—')}</td>
         <td>${t.requests_hoy || 0} / ${t.max_requests_dia || '∞'}</td>
         <td><span class="badge ${t.activo ? 'aprobado' : 'rechazado'}">${t.activo ? 'Activo' : 'Inactivo'}</span></td>
-        <td><button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button></td>
+        <td style="display:flex;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-ghost" onclick="toggleToken(${t.id_token})">${t.activo ? '⏸ Desactivar' : '▶ Activar'}</button>
+          <button class="btn btn-red" style="padding:6px 10px;font-size:11px;" onclick="abrirEliminarToken(${t.id_token}, '${escapeHtml(t.nombre_token)}')">🗑 Eliminar</button>
+        </td>
       </tr>
     `).join('');
   } catch(e) {
     console.error('Error loading tokens:', e);
+  }
+}
+
+function abrirEliminarToken(id, nombre) {
+  tokenParaEliminar = id;
+  const modal = document.getElementById('modal-eliminar-token');
+  modal.querySelector('.modal-body p:first-child').innerHTML = `
+    Esta acción eliminará permanentemente el token y el usuario asociado: <strong style="color:var(--text);">${escapeHtml(nombre)}</strong>.<br><br>
+    El estudiante ya no podrá acceder a la API.
+  `;
+  modal.classList.add('open');
+}
+
+async function confirmarEliminarToken() {
+  if (!tokenParaEliminar) return;
+  const [res] = await apiFetch(`/api/admin/tokens/${tokenParaEliminar}`, { method: 'DELETE' });
+  document.getElementById('modal-eliminar-token').classList.remove('open');
+  tokenParaEliminar = null;
+  if (res.ok) {
+    toast('Usuario y token eliminados correctamente', 'success');
+    loadTokens();
+    loadStats();
+  } else {
+    toast('Error al eliminar el token', 'error');
   }
 }
 
@@ -811,21 +910,137 @@ async function loadLogs() {
   }
 }
 
-// ── IPs Bloqueadas ───────────────────────────────────────────
+// ── IPs Bloqueadas y Monitor ─────────────────────────────────
 async function loadIPs() {
+  await Promise.all([loadIPsActivas(), loadIPsBloqueadas()]);
+}
+
+async function loadIPsActivas() {
+  const tb = document.getElementById('tabla-ips-activas');
+  try {
+    // Intentar obtener IPs de logs recientes
+    const [res, d] = await apiFetch('/api/admin/logs?page=1&limit=100');
+    if (!res.ok) {
+      tb.innerHTML = '<tr><td colspan="7" class="empty">No se pudieron cargar los logs de conexiones</td></tr>';
+      return;
+    }
+    const logs = d.logs || [];
+
+    // Agrupar por IP para obtener usuarios conectados
+    const ipMap = {};
+    logs.forEach(l => {
+      const ip = l.ip_publica || 'Desconocida';
+      if (!ipMap[ip]) {
+        ipMap[ip] = {
+          ip,
+          usuario: l.nombre_usuario || '—',
+          ultimo_endpoint: l.endpoint || '—',
+          ultima_actividad: l.fecha_uso,
+          llamadas: 0,
+          errores: 0
+        };
+      }
+      ipMap[ip].llamadas++;
+      if (l.codigo_respuesta >= 400) ipMap[ip].errores++;
+      if (!ipMap[ip].ultima_actividad || new Date(l.fecha_uso) > new Date(ipMap[ip].ultima_actividad)) {
+        ipMap[ip].ultima_actividad = l.fecha_uso;
+        ipMap[ip].ultimo_endpoint = l.endpoint || '—';
+        ipMap[ip].usuario = l.nombre_usuario || ipMap[ip].usuario;
+      }
+    });
+
+    const ips = Object.values(ipMap);
+    if (!ips.length) {
+      tb.innerHTML = '<tr><td colspan="7" class="empty">Sin actividad reciente registrada</td></tr>';
+      return;
+    }
+
+    // Ordenar por actividad más reciente
+    ips.sort((a, b) => new Date(b.ultima_actividad) - new Date(a.ultima_actividad));
+
+    tb.innerHTML = ips.map(i => {
+      const tasaSospechosa = i.errores > 10 || i.llamadas > 50;
+      const estado = tasaSospechosa
+        ? `<span class="badge pendiente">⚠️ Sospechosa</span>`
+        : `<span class="badge aprobado">✅ Normal</span>`;
+      return `
+        <tr style="${tasaSospechosa ? 'background:rgba(239,68,68,0.04);' : ''}">
+          <td style="font-family:monospace;font-size:13px;">${escapeHtml(i.ip)}</td>
+          <td>${escapeHtml(i.usuario)}</td>
+          <td style="font-size:11px;font-family:monospace;">${escapeHtml(i.ultimo_endpoint)}</td>
+          <td style="font-size:11px;">${i.ultima_actividad ? new Date(i.ultima_actividad).toLocaleString() : '—'}</td>
+          <td style="font-family:monospace;">${i.llamadas} <span style="color:var(--red);font-size:11px;">(${i.errores} err)</span></td>
+          <td>${estado}</td>
+          <td style="display:flex;gap:6px;">
+            <button class="btn btn-red" style="font-size:11px;padding:4px 10px;" onclick="bloquearIPRapido('${escapeHtml(i.ip)}')">🚫 Bloquear</button>
+            ${tasaSospechosa ? `<button class="btn btn-ghost" style="font-size:11px;padding:4px 10px;" onclick="crearAlerta('${escapeHtml(i.ip)}','Actividad sospechosa')">⚠️ Alertar</button>` : ''}
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch(e) {
+    tb.innerHTML = '<tr><td colspan="7" class="empty">Error al cargar conexiones activas</td></tr>';
+    console.error(e);
+  }
+}
+
+async function loadIPsBloqueadas() {
+  const tb = document.getElementById('tabla-ips');
   try {
     const [, d] = await apiFetch('/api/admin/ips-bloqueadas');
     const list = d.ips || [];
-    const tb = document.getElementById('tabla-ips');
     if (!list.length) { tb.innerHTML = '<tr><td colspan="4" class="empty">Sin IPs bloqueadas</td></tr>'; return; }
     tb.innerHTML = list.map(i => `
-      <tr><td class="mono">${i.ip}</td><td>${escapeHtml(i.motivo)}</td><td>${i.fecha_bloqueo ? new Date(i.fecha_bloqueo).toLocaleDateString() : '—'}</td>
-      <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">Desbloquear</button></td>
-    </tr>
+      <tr>
+        <td style="font-family:monospace;">${escapeHtml(i.ip)}</td>
+        <td>${escapeHtml(i.motivo)}</td>
+        <td style="font-size:12px;">${i.fecha_bloqueo ? new Date(i.fecha_bloqueo).toLocaleDateString() : '—'}</td>
+        <td><button class="btn btn-green" onclick="desbloquearIP(${i.id_bloqueo})">✅ Desbloquear</button></td>
+      </tr>
     `).join('');
   } catch(e) {
-    console.error('Error loading IPs:', e);
+    tb.innerHTML = '<tr><td colspan="4" class="empty">Error al cargar IPs bloqueadas</td></tr>';
   }
+}
+
+function abrirModalBloquearIP() {
+  document.getElementById('modal-bloquear-ip').classList.add('open');
+  document.getElementById('bloquear-ip-valor').value = '';
+  document.getElementById('bloquear-ip-motivo').value = '';
+}
+
+function bloquearIPRapido(ip) {
+  document.getElementById('bloquear-ip-valor').value = ip;
+  document.getElementById('bloquear-ip-motivo').value = 'Bloqueada por actividad sospechosa detectada en el monitor';
+  document.getElementById('modal-bloquear-ip').classList.add('open');
+}
+
+async function confirmarBloqueoIP() {
+  const ip = document.getElementById('bloquear-ip-valor').value.trim();
+  const motivo = document.getElementById('bloquear-ip-motivo').value.trim();
+  if (!ip) { toast('Ingresa una dirección IP', 'error'); return; }
+  if (!motivo) { toast('Ingresa el motivo del bloqueo', 'error'); return; }
+
+  const [res] = await apiFetch('/api/admin/ips-bloqueadas', {
+    method: 'POST',
+    body: JSON.stringify({ ip, motivo })
+  });
+  document.getElementById('modal-bloquear-ip').classList.remove('open');
+  if (res.ok) {
+    toast(`IP ${ip} bloqueada correctamente`, 'success');
+    loadIPs();
+  } else {
+    toast('Error al bloquear la IP', 'error');
+  }
+}
+
+async function crearAlerta(ip, tipo) {
+  await apiFetch('/api/admin/alertas', {
+    method: 'POST',
+    body: JSON.stringify({ ip, tipo, descripcion: `Actividad sospechosa detectada desde ${ip}` })
+  });
+  toast(`Alerta creada para ${ip}`, 'success');
 }
 
 async function desbloquearIP(id) {
@@ -844,15 +1059,69 @@ async function loadAlertas() {
     const [, d] = await apiFetch('/api/admin/alertas');
     const list = d.alertas || [];
     const tb = document.getElementById('tabla-alertas');
-    if (!list.length) { tb.innerHTML = '<tr><td colspan="3" class="empty">Sin alertas</td></tr>'; return; }
-    tb.innerHTML = list.map(a => `
-      <tr><td><span class="badge pendiente">${escapeHtml(a.tipo)}</span></td><td>${escapeHtml(a.descripcion)}</td>
-      <td style="font-size:12px">${a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleString() : '—'}</td>
-    </tr>
-    `).join('');
+
+    // Actualizar contadores
+    document.getElementById('alerta-total').textContent = list.length;
+    const rateLimit = list.filter(a => (a.tipo || '').toLowerCase().includes('rate') || (a.tipo || '').toLowerCase().includes('limit')).length;
+    const ipSosp   = list.filter(a => (a.tipo || '').toLowerCase().includes('ip') || (a.tipo || '').toLowerCase().includes('bloqueo')).length;
+    const err500   = list.filter(a => (a.tipo || '').toLowerCase().includes('error') || (a.tipo || '').toLowerCase().includes('500')).length;
+    document.getElementById('alerta-rate').textContent = rateLimit;
+    document.getElementById('alerta-ip').textContent = ipSosp;
+    document.getElementById('alerta-err').textContent = err500;
+
+    // Mostrar badge en sidebar si hay alertas
+    const badge = document.getElementById('badge-alertas');
+    if (list.length > 0) {
+      badge.style.display = 'inline-block';
+      badge.textContent = list.length > 99 ? '99+' : list.length;
+    } else {
+      badge.style.display = 'none';
+    }
+
+    if (!list.length) { tb.innerHTML = '<tr><td colspan="6" class="empty">✅ Sin alertas activas</td></tr>'; return; }
+
+    tb.innerHTML = list.map(a => {
+      const tipo = (a.tipo || '').toLowerCase();
+      const severidad = tipo.includes('critico') || tipo.includes('rate') || tipo.includes('bloqueo')
+        ? `<span class="badge rechazado">🔴 Crítico</span>`
+        : tipo.includes('error') || tipo.includes('sospech')
+        ? `<span class="badge pendiente">🟡 Medio</span>`
+        : `<span class="badge" style="background:rgba(59,130,246,0.15);color:var(--accent);">🔵 Info</span>`;
+
+      const ip = a.ip || a.ip_publica || '—';
+      const tieneIP = ip !== '—';
+
+      return `
+        <tr>
+          <td>${severidad}</td>
+          <td><span class="badge pendiente">${escapeHtml(a.tipo)}</span></td>
+          <td style="font-size:12px;">${escapeHtml(a.descripcion)}</td>
+          <td style="font-family:monospace;font-size:12px;">${escapeHtml(ip)}</td>
+          <td style="font-size:11px;">${a.fecha_alerta ? new Date(a.fecha_alerta).toLocaleString() : '—'}</td>
+          <td style="display:flex;gap:4px;">
+            ${tieneIP ? `<button class="btn btn-red" style="font-size:10px;padding:4px 8px;" onclick="bloquearIPRapido('${escapeHtml(ip)}')">🚫 Bloquear IP</button>` : ''}
+            <button class="btn btn-ghost" style="font-size:10px;padding:4px 8px;" onclick="eliminarAlerta(${a.id_alerta || a.id})">✓ Leída</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   } catch(e) {
     console.error('Error loading alertas:', e);
   }
+}
+
+async function eliminarAlerta(id) {
+  if (!id) return;
+  const [res] = await apiFetch(`/api/admin/alertas/${id}`, { method: 'DELETE' });
+  if (res.ok) { toast('Alerta marcada como leída', 'success'); loadAlertas(); }
+  else { toast('No se pudo marcar la alerta', 'error'); }
+}
+
+async function marcarTodasLeidas() {
+  if (!confirm('¿Marcar todas las alertas como leídas?')) return;
+  const [res] = await apiFetch('/api/admin/alertas', { method: 'DELETE' });
+  if (res.ok) { toast('Todas las alertas marcadas como leídas', 'success'); loadAlertas(); }
+  else { toast('Error al limpiar alertas', 'error'); }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -860,6 +1129,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('admin-password')?.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') loginAdmin();
   });
+
+  // Auto-refresh de alertas cada 60 segundos para notificar badge
+  setInterval(async () => {
+    const token = localStorage.getItem(CONFIG.TOKEN_KEY);
+    if (!token) return;
+    try {
+      const [, d] = await apiFetch('/api/admin/alertas');
+      const count = (d.alertas || []).length;
+      const badge = document.getElementById('badge-alertas');
+      if (badge) {
+        badge.style.display = count > 0 ? 'inline-block' : 'none';
+        badge.textContent = count > 99 ? '99+' : count;
+      }
+    } catch(e) { /* silently ignore */ }
+  }, 60000);
 });
 </script>
 </body>

@@ -630,10 +630,16 @@ pre.response-body {
       </button>
     </div>
 
-    <p style="text-align:center;margin-top:20px;font-size:12px;color:var(--muted);">
-      ¿No tienes cuenta?
-      <a href="#" onclick="showPublicForm()" style="color:var(--accent);text-decoration:none;">Solicita acceso aquí</a>
-    </p>
+    <div style="text-align:center;margin-top:20px;padding:14px 18px;background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:12px;">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:6px;">¿No tienes cuenta?</p>
+      <p style="font-size:12px;color:var(--text);line-height:1.6;">
+        Envía un correo solicitando tu usuario y contraseña a:<br>
+        <a href="mailto:admin@crm-ingsoftware.com" style="color:var(--accent);font-weight:600;text-decoration:none;font-family:var(--mono);font-size:13px;">
+          ✉️ admin@crm-ingsoftware.com
+        </a>
+      </p>
+      <p style="font-size:11px;color:var(--muted);margin-top:6px;">Incluye tu nombre completo, carnet y grupo.</p>
+    </div>
   </div>
 </div>
 
@@ -861,69 +867,37 @@ pre.response-body {
   <!-- SOLICITUD DE ACCESO (visible siempre, scroll) -->
   <div class="request-section" id="solicitar">
     <div class="section-header" style="margin-bottom:20px;">
-      <div class="section-title">Solicitar acceso a la API</div>
+      <div class="section-title">¿Necesitas acceso a la API?</div>
     </div>
     <div class="form-card" id="form-card">
+      <div class="form-card-title">📧 Solicita tus credenciales por correo</div>
       <div class="form-card-sub">
-        Sin registro previo. Llena tus datos y el administrador te enviará tu token al correo estudiantil.
+        Para obtener tu usuario y contraseña de acceso, envía un correo al administrador con tu información.
       </div>
 
-      <div id="form-alert" class="alert alert-err"></div>
-
-      <div class="form-row">
-        <div class="field">
-          <label>Nombre completo <span class="req">*</span></label>
-          <input type="text" id="f-nombre" placeholder="Tu nombre completo">
+      <div style="background:var(--surface2);border:1px solid var(--border-bright);border-radius:14px;padding:24px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="font-size:32px;">✉️</div>
+          <div>
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Correo del administrador</div>
+            <a href="mailto:admin@crm-ingsoftware.com" style="color:var(--cyan);font-family:var(--mono);font-size:15px;font-weight:600;text-decoration:none;">
+              admin@crm-ingsoftware.com
+            </a>
+          </div>
         </div>
-        <div class="field">
-          <label>No. de carnet <span class="req">*</span></label>
-          <input type="text" id="f-carnet" placeholder="202300000">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="field">
-          <label>Teléfono</label>
-          <input type="tel" id="f-tel" placeholder="+502 0000-0000">
-        </div>
-        <div class="field">
-          <label>Correo estudiantil <span class="req">*</span></label>
-          <input type="email" id="f-correo" placeholder="carnet@estudiantes.usac.edu.gt">
-        </div>
-      </div>
-      <div class="field">
-        <label>Número de grupo <span class="req">*</span></label>
-        <input type="text" id="f-grupo" placeholder="Ej: Grupo 1, Sección A...">
-      </div>
-      <div class="field">
-        <label>APIs que deseas habilitar <span class="req">*</span></label>
-        <div class="api-checks">
-          <label class="api-check">
-            <input type="checkbox" value="/api/pub/clientes" onchange="this.closest('.api-check').classList.toggle('selected',this.checked)">
-            <div>
-              <span class="api-check-path">📋 /api/pub/clientes</span>
-              <span class="api-check-desc">Clientes activos</span>
-            </div>
-          </label>
-          <label class="api-check">
-            <input type="checkbox" value="/api/pub/proveedores" onchange="this.closest('.api-check').classList.toggle('selected',this.checked)">
-            <div>
-              <span class="api-check-path">🏢 /api/pub/proveedores</span>
-              <span class="api-check-desc">Proveedores activos</span>
-            </div>
-          </label>
-          <label class="api-check">
-            <input type="checkbox" value="/api/pub/empleados" onchange="this.closest('.api-check').classList.toggle('selected',this.checked)">
-            <div>
-              <span class="api-check-path">👤 /api/pub/empleados</span>
-              <span class="api-check-desc">Empleados activos</span>
-            </div>
-          </label>
+        <div style="font-size:13px;color:var(--muted);line-height:1.8;border-top:1px solid var(--border);padding-top:14px;">
+          <strong style="color:var(--text);">Incluye en tu correo:</strong><br>
+          📝 Nombre completo<br>
+          🎓 Número de carnet<br>
+          👥 Número de grupo / sección<br>
+          📱 Teléfono (opcional)<br>
+          📡 APIs que deseas usar (clientes, proveedores, empleados)
         </div>
       </div>
 
-      <button class="btn-submit" id="btn-enviar" onclick="enviarSolicitud()">
-        📝 Enviar solicitud de acceso
-      </button>
+      <div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;">
+        <span style="color:var(--amber);">⏱</span> Tiempo de respuesta estimado: 24–48 horas hábiles.
+      </div>
     </div>
   </div>
 
@@ -1203,22 +1177,36 @@ async function runApi(path, responseId) {
       headers: { 'X-API-Token': state.apiToken }
     });
     const elapsed = Date.now() - t0;
-    const data = await res.json();
+
+    let data;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = { error: text || 'Respuesta no JSON del servidor' };
+    }
 
     respWrap.classList.add('visible');
 
     const statusClass = res.status < 300 ? 'status-2xx' : res.status < 500 ? 'status-4xx' : 'status-5xx';
-    statusEl.textContent = res.status + ' ' + (res.status === 200 ? 'OK' : 'Error');
+    const statusText = res.status === 200 ? 'OK' : res.status === 500 ? 'Internal Server Error' : res.status === 401 ? 'Unauthorized' : res.status === 403 ? 'Forbidden' : 'Error';
+    statusEl.textContent = res.status + ' ' + statusText;
     statusEl.className = `status-badge ${statusClass}`;
     timeEl.textContent = `${elapsed}ms`;
-    bodyEl.textContent = JSON.stringify(data, null, 2);
+
+    if (res.status >= 500) {
+      bodyEl.textContent = '⚠️ El servidor está experimentando problemas internos (500).\n\nPosibles causas:\n• El servidor backend en Render está reiniciando (free tier)\n• Error en la base de datos del servidor\n• Token inválido o expirado\n\nIntenta de nuevo en unos segundos.\n\nRespuesta del servidor:\n' + JSON.stringify(data, null, 2);
+    } else {
+      bodyEl.textContent = JSON.stringify(data, null, 2);
+    }
 
   } catch (e) {
     respWrap.classList.add('visible');
     statusEl.textContent = 'Error de red';
     statusEl.className = 'status-badge status-4xx';
     timeEl.textContent = '';
-    bodyEl.textContent = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+    bodyEl.textContent = 'No se pudo conectar con el servidor.\n\nVerifica tu conexión a internet o que el servidor esté activo.\n\nError: ' + e.message;
   } finally {
     btn.disabled = false;
     btn.innerHTML = '▶ Ejecutar';
