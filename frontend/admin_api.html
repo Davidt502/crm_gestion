@@ -693,6 +693,11 @@ async function loadUsuariosPortal() {
       tb.innerHTML = '<tr><td colspan="7" class="empty">No hay usuarios portal</td></tr>';
       return;
     }
+    // Guardar datos en Map para que editarUsuarioPortal los lea sin
+    // pasar objetos complejos (con JSON.stringify) dentro de onclick=""
+    _usuariosPortalMap = {};
+    data.usuarios.forEach(u => { _usuariosPortalMap[u.id_usuario] = u; });
+
     tb.innerHTML = data.usuarios.map(u => `
       <tr>
         <td>${u.id_usuario}</td>
@@ -702,7 +707,7 @@ async function loadUsuariosPortal() {
         <td style="font-size:10px;max-width:180px;">${(u.endpoints_permitidos || []).map(e => e.split('/').pop()).join('<br>')}</td>
         <td>${u.max_requests_dia || 500}</td>
         <td>
-          <button class="btn btn-ghost" onclick="editarUsuarioPortal(${u.id_usuario}, ${JSON.stringify(u).replace(/'/g, '&#39;')})" style="padding:4px 8px;font-size:10px;">✏️ Editar</button>
+          <button class="btn btn-ghost" onclick="editarUsuarioPortal(${u.id_usuario})" style="padding:4px 8px;font-size:10px;">✏️ Editar</button>
           <button class="btn btn-red" onclick="eliminarUsuarioPortal(${u.id_usuario})" style="padding:4px 8px;font-size:10px;">🗑 Eliminar</button>
         </td>
       </tr>
@@ -724,6 +729,8 @@ function escapeHtml(str) {
 
 // Estado del modal de usuario (null = crear, número = id del usuario a editar)
 let _editandoUsuarioId = null;
+// Cache de datos de usuarios portal (id → objeto usuario), llenado en loadUsuariosPortal
+let _usuariosPortalMap = {};
 
 function abrirModalUsuarioPortal() {
   _editandoUsuarioId = null;
@@ -742,7 +749,8 @@ function abrirModalUsuarioPortal() {
   document.getElementById('modal-usuario-portal').classList.add('open');
 }
 
-function editarUsuarioPortal(id, usuario) {
+function editarUsuarioPortal(id) {
+  const usuario = _usuariosPortalMap[id] || {};
   _editandoUsuarioId = id;
   document.getElementById('modal-usuario-title').textContent = 'Editar Usuario Portal';
   document.getElementById('btn-guardar-usuario').textContent = 'Guardar cambios';
