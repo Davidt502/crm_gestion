@@ -938,6 +938,58 @@ def toggle_token(id_token):
         return jsonify({"error": str(exc)}), 500
 
 
+@api_publica_bp.route("/api/admin/tokens/<int:id_token>", methods=["DELETE"])
+@token_required
+def eliminar_token(id_token):
+    """Elimina un token y el usuario portal asociado (si existe)"""
+    es_admin, _ = _solo_admin()
+    if not es_admin:
+        return jsonify({"error": "Solo administradores."}), 403
+    try:
+        with db_connection() as (conn, cursor):
+            # Obtener id_usuario vinculado al token antes de eliminar
+            cursor.execute(
+                "SELECT id_usuario FROM api_tokens WHERE id_token = %s",
+                [id_token]
+            )
+            row = cursor.fetchone()
+            if not row:
+                return jsonify({"error": "Token no encontrado."}), 404
+
+            id_usuario = row[0]
+
+            # Eliminar el token
+            cursor.execute("DELETE FROM api_tokens WHERE id_token = %s", [id_token])
+
+            # Eliminar solicitudes vinculadas al token (para no dejar registros huérfanos)
+            cursor.execute(
+                "UPDATE api_solicitudes SET id_token = NULL WHERE id_token = %s",
+                [id_token]
+            )
+
+            # Si el usuario es de rol 'portal' (no admin), eliminar también su cuenta
+            if id_usuario:
+                cursor.execute(
+                    "SELECT rol FROM usuarios WHERE id_usuario = %s",
+                    [id_usuario]
+                )
+                u_row = cursor.fetchone()
+                if u_row and u_row[0] == 'portal':
+                    cursor.execute(
+                        "DELETE FROM portal_usuarios WHERE id_usuario = %s",
+                        [id_usuario]
+                    )
+                    cursor.execute(
+                        "DELETE FROM usuarios WHERE id_usuario = %s AND rol = 'portal'",
+                        [id_usuario]
+                    )
+
+        return jsonify({"success": True, "mensaje": "Token y usuario eliminados correctamente."})
+    except Exception as exc:
+        logger.error("eliminar_token: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
+
+
 # ══════════════════════════════════════════════════════════════
 # GESTIÓN ADMIN - LOGS
 # ══════════════════════════════════════════════════════════════
@@ -1079,6 +1131,53 @@ def listar_ips_bloqueadas():
         return jsonify({"error": str(exc)}), 500
 
 
+@api_publica_bp.route("/api/admin/ips-bloqueadas", methods=["POST"])
+@token_required
+def bloquear_ip():
+    """Bloquear una IP manualmente desde el panel de admin"""
+    es_admin, admin_user = _solo_admin()
+    if not es_admin:
+        return jsonify({"error": "Solo administradores."}), 403
+
+    data = request.get_json(silent=True) or {}
+    ip = str(data.get("ip", "")).strip()
+    motivo = str(data.get("motivo", "Bloqueada manualmente por administrador")).strip()
+
+    if not ip:
+        return jsonify({"error": "La IP es requerida."}), 400
+
+    try:
+        with db_connection() as (conn, cursor):
+            # Verificar si ya está bloqueada
+            cursor.execute(
+                "SELECT id_bloqueo FROM api_ips_bloqueadas WHERE ip = %s AND activo = TRUE",
+                [ip]
+            )
+            if cursor.fetchone():
+                return jsonify({"error": "Esta IP ya está bloqueada."}), 409
+
+            cursor.execute("""
+                INSERT INTO api_ips_bloqueadas (ip, motivo, activo, fecha_bloqueo)
+                VALUES (%s, %s, TRUE, NOW())
+                RETURNING id_bloqueo
+            """, [ip, motivo])
+            id_bloqueo = cursor.fetchone()[0]
+
+            # Registrar alerta del bloqueo
+            try:
+                cursor.execute("""
+                    INSERT INTO api_alertas (tipo, descripcion, ip, fecha_alerta)
+                    VALUES ('bloqueo_manual', %s, %s, NOW())
+                """, [f"IP {ip} bloqueada manualmente por {admin_user}: {motivo}", ip])
+            except Exception:
+                pass  # La tabla de alertas es opcional
+
+        return jsonify({"success": True, "id_bloqueo": id_bloqueo, "mensaje": f"IP {ip} bloqueada correctamente."})
+    except Exception as exc:
+        logger.error("bloquear_ip: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
+
+
 @api_publica_bp.route("/api/admin/ips-bloqueadas/<int:id_bloqueo>", methods=["DELETE"])
 @token_required
 def desbloquear_ip(id_bloqueo):
@@ -1125,6 +1224,68 @@ def listar_alertas():
     except Exception as exc:
         logger.error("listar_alertas: %s", exc, exc_info=True)
         return jsonify({"alertas": [], "total": 0})
+
+
+@api_publica_bp.route("/api/admin/alertas", methods=["POST"])
+@token_required
+def crear_alerta():
+    """Crear una alerta manualmente desde el panel de admin"""
+    es_admin, _ = _solo_admin()
+    if not es_admin:
+        return jsonify({"error": "Solo administradores."}), 403
+
+    data = request.get_json(silent=True) or {}
+    tipo = str(data.get("tipo", "manual")).strip()
+    descripcion = str(data.get("descripcion", "")).strip()
+    ip = str(data.get("ip", "")).strip() or None
+
+    if not descripcion:
+        return jsonify({"error": "La descripción es requerida."}), 400
+
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute("""
+                INSERT INTO api_alertas (tipo, descripcion, ip, fecha_alerta)
+                VALUES (%s, %s, %s, NOW())
+                RETURNING id_alerta
+            """, [tipo, descripcion, ip])
+            id_alerta = cursor.fetchone()[0]
+        return jsonify({"success": True, "id_alerta": id_alerta, "mensaje": "Alerta creada."}), 201
+    except Exception as exc:
+        logger.error("crear_alerta: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
+
+
+@api_publica_bp.route("/api/admin/alertas/<int:id_alerta>", methods=["DELETE"])
+@token_required
+def eliminar_alerta(id_alerta):
+    """Marcar una alerta individual como leída (eliminar)"""
+    es_admin, _ = _solo_admin()
+    if not es_admin:
+        return jsonify({"error": "Solo administradores."}), 403
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute("DELETE FROM api_alertas WHERE id_alerta = %s", [id_alerta])
+        return jsonify({"success": True, "mensaje": "Alerta eliminada."})
+    except Exception as exc:
+        logger.error("eliminar_alerta: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
+
+
+@api_publica_bp.route("/api/admin/alertas", methods=["DELETE"])
+@token_required
+def eliminar_todas_alertas():
+    """Marcar todas las alertas como leídas (eliminar todas)"""
+    es_admin, _ = _solo_admin()
+    if not es_admin:
+        return jsonify({"error": "Solo administradores."}), 403
+    try:
+        with db_connection() as (conn, cursor):
+            cursor.execute("DELETE FROM api_alertas")
+        return jsonify({"success": True, "mensaje": "Todas las alertas eliminadas."})
+    except Exception as exc:
+        logger.error("eliminar_todas_alertas: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
 
 
 # ══════════════════════════════════════════════════════════════
