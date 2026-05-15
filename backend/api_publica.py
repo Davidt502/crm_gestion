@@ -646,13 +646,22 @@ def _resolver_via_link(token_ver, accion):
                 nuevo_token = secrets.token_urlsafe(48)
                 cursor.execute("SELECT id_usuario FROM usuarios WHERE rol='admin' LIMIT 1")
                 id_admin = cursor.fetchone()[0]
+                # FIX: incluir endpoints_permitidos para que token_publico_required
+                # no reciba NULL y lance excepción → 500
+                endpoints_default = json.dumps([
+                    "/api/pub/clientes",
+                    "/api/pub/proveedores",
+                    "/api/pub/empleados"
+                ])
                 cursor.execute("""
                     INSERT INTO api_tokens
                         (nombre_token, token, id_usuario, puede_leer, puede_escribir,
-                         activo, usuario_creacion, max_requests_dia)
-                    VALUES (%s, %s, %s, TRUE, FALSE, TRUE, 'admin_link', 1000)
+                         activo, usuario_creacion, max_requests_dia,
+                         endpoints_permitidos, id_solicitud)
+                    VALUES (%s, %s, %s, TRUE, FALSE, TRUE, 'admin_link', 1000, %s, %s)
                     RETURNING id_token
-                """, [f"Token - {nombre}", nuevo_token, id_admin])
+                """, [f"Token - {nombre}", nuevo_token, id_admin,
+                      endpoints_default, id_sol])
                 id_token = cursor.fetchone()[0]
                 cursor.execute("""
                     UPDATE api_solicitudes SET estado='Aprobado', id_token=%s,
@@ -1317,10 +1326,13 @@ def token_publico_required(f):
                 if not activo:
                     return jsonify({"error": "Token inactivo"}), 401
                 
-                # Verificar si el token tiene acceso al endpoint actual
+                # FIX: parseo robusto — endpoints_json puede ser NULL, string vacío
+                # o JSON malformado; en todos esos casos lista vacía = sin restricción
                 try:
                     endpoints = json.loads(endpoints_json) if endpoints_json else []
-                except:
+                    if not isinstance(endpoints, list):
+                        endpoints = []
+                except (TypeError, ValueError, Exception):
                     endpoints = []
                 
                 current_endpoint = request.path
@@ -1330,8 +1342,13 @@ def token_publico_required(f):
                 g.token_info = {"id_token": id_token, "nombre": nombre}
                 return f(*args, **kwargs)
         except Exception as e:
-            logger.error("token_publico_required: %s", e)
-            return jsonify({"error": "Error validando token"}), 500
+            logger.error("token_publico_required: %s", e, exc_info=True)
+            # FIX: mensaje más descriptivo para facilitar debug en Render
+            return jsonify({
+                "error": "Error interno al validar el token. "
+                         "El servidor puede estar reiniciando. "
+                         "Intenta de nuevo en unos segundos."
+            }), 500
     return decorated
 
 

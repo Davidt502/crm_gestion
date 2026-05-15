@@ -650,7 +650,7 @@ pre.response-body {
 
   <!-- NAV -->
   <nav>
-    <div class="nav-logo">CRM <span>GESTION</span><span>API</span></div>
+    <div class="nav-logo">CRM <span>API</span></div>
     <div class="nav-right">
       <span class="nav-user-badge" id="nav-username"></span>
       <button class="btn-logout" onclick="doLogout()">Salir</button>
@@ -660,7 +660,7 @@ pre.response-body {
   <!-- HERO -->
   <div class="hero">
     <div class="hero-greeting" id="greeting-text">● PORTAL DE API</div>
-    <h1 class="hero-title"><span id="hero-name"></span><br>Tu Token de acceso   para usar nuestras APIs</h1>
+    <h1 class="hero-title">Tu token <span id="hero-name"></span><br>de acceso</h1>
   </div>
 
   <!-- TOKEN CARD -->
@@ -1015,10 +1015,13 @@ async function loadUserToken() {
       if (data2.tokens && data2.tokens.length > 0) {
         // Show first active token
         const tk = data2.tokens.find(t => t.activo) || data2.tokens[0];
-        // Admin view shows preview only, but we display full if available
-        state.apiToken = tk.token || null;
-        renderToken({ token: tk.token, max_requests_dia: tk.max_requests_dia, endpoints: tk.apis_solicitadas });
-        if (tk.token) updateCurlExamples(tk.token);
+        // FIX: /api/admin/tokens devuelve token_preview (8 chars + "..."), no el
+        // token completo. Asignarlo a state.apiToken causaría un 401/500 al llamar
+        // /api/pub/* porque el servidor no lo encontraría en la BD.
+        // Solo mostramos info de referencia; el token real viene de /api/portal/mi-token.
+        state.apiToken = null; // nunca usar token_preview como X-API-Token real
+        renderToken({ token: null, max_requests_dia: tk.max_requests_dia, endpoints: tk.apis_solicitadas });
+        // No llamamos updateCurlExamples: sin token completo no hay ejemplo válido
         return;
       }
     }
