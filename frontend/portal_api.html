@@ -685,6 +685,9 @@ pre.response-body {
         <button class="btn-sm btn-toggle-vis" onclick="toggleTokenVis()" id="btn-vis">
           👁 Ocultar
         </button>
+        <button class="btn-sm btn-toggle-vis" onclick="loadUserToken()" title="Recargar token desde el servidor" style="font-size:13px;padding:7px 10px;">
+          🔄
+        </button>
       </div>
     </div>
   </div>
@@ -975,22 +978,26 @@ async function doLogin() {
 }
 
 // ─── Load user's API Token from backend ──────────────────
-// The portal JWT is separate from the X-API-Token used for data endpoints.
-// We call /api/admin/tokens (or a dedicated endpoint) to find the token linked
-// to this user's approved solicitud.
-async function loadUserToken() {
-  const tokenDisplay = document.getElementById('token-display-text');
-  const tokenMeta = document.getElementById('token-meta-info');
+// Obtiene el X-API-Token real desde /api/portal/mi-token.
+// Si el servidor responde 500 (Render reiniciando), reintenta hasta 3 veces.
+async function loadUserToken(attempt = 1) {
+  const MAX_ATTEMPTS = 3;
+  const metaEl = document.getElementById('token-meta-info');
 
   try {
-    // Try to get the user's API token from the solicitudes approved for their email
-    // We use the portal JWT to authenticate this request
     const res = await fetch(`${API_BASE}/api/portal/mi-token`, {
       headers: {
         'Authorization': `Bearer ${state.jwtToken}`,
         'Content-Type': 'application/json'
       }
     });
+
+    // Servidor reiniciando (500): reintentar con backoff
+    if (res.status === 500 && attempt < MAX_ATTEMPTS) {
+      if (metaEl) metaEl.textContent = `Servidor iniciando… intento ${attempt}/${MAX_ATTEMPTS}`;
+      await new Promise(r => setTimeout(r, 4000 * attempt));
+      return loadUserToken(attempt + 1);
+    }
 
     if (res.ok) {
       const data = await res.json();
@@ -1002,35 +1009,11 @@ async function loadUserToken() {
       }
     }
 
-    // Fallback: try admin tokens endpoint if user is admin-level
-    const res2 = await fetch(`${API_BASE}/api/admin/tokens`, {
-      headers: {
-        'Authorization': `Bearer ${state.jwtToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (res2.ok) {
-      const data2 = await res2.json();
-      if (data2.tokens && data2.tokens.length > 0) {
-        // Show first active token
-        const tk = data2.tokens.find(t => t.activo) || data2.tokens[0];
-        // FIX: /api/admin/tokens devuelve token_preview (8 chars + "..."), no el
-        // token completo. Asignarlo a state.apiToken causaría un 401/500 al llamar
-        // /api/pub/* porque el servidor no lo encontraría en la BD.
-        // Solo mostramos info de referencia; el token real viene de /api/portal/mi-token.
-        state.apiToken = null; // nunca usar token_preview como X-API-Token real
-        renderToken({ token: null, max_requests_dia: tk.max_requests_dia, endpoints: tk.apis_solicitadas });
-        // No llamamos updateCurlExamples: sin token completo no hay ejemplo válido
-        return;
-      }
-    }
-
-    // No token found — show message
+    // Sin token aprobado aún — permitir ingreso manual
     renderNoToken();
 
   } catch (e) {
-    // Network error or endpoint doesn't exist yet — show guidance
+    // Error de red — mostrar opción de ingreso manual
     renderNoToken();
   }
 }
@@ -1059,11 +1042,41 @@ function renderNoToken() {
   const visBtn = document.getElementById('btn-vis');
 
   wrap.innerHTML = `
-    <div class="token-no-token">
-      ⚠️ Aún no tienes un API Token asignado. Envía tu solicitud abajo y el administrador te lo enviará por correo.
+    <div class="token-no-token" style="margin-bottom:12px;">
+      ⚠️ No se encontró un API Token activo para tu cuenta.<br>
+      <span style="font-size:11px;opacity:0.8;">Si ya te enviaron un token por correo, ingrésalo manualmente:</span>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+      <input
+        type="text"
+        id="manual-token-input"
+        placeholder="Pega aquí tu X-API-Token..."
+        style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+               padding:10px 14px;color:var(--text);font-family:var(--mono);font-size:12px;
+               outline:none;transition:border-color 0.2s;"
+        onfocus="this.style.borderColor='var(--accent)'"
+        onblur="this.style.borderColor='var(--border)'"
+      >
+      <button class="btn-sm btn-copy" onclick="applyManualToken()" style="white-space:nowrap;padding:10px 14px;">
+        ✓ Usar token
+      </button>
     </div>`;
   copyBtn.style.display = 'none';
   visBtn.style.display = 'none';
+}
+
+function applyManualToken() {
+  const input = document.getElementById('manual-token-input');
+  if (!input) return;
+  const token = input.value.trim();
+  if (!token || token.length < 10) {
+    toast('Ingresa un token válido', 'err');
+    return;
+  }
+  state.apiToken = token;
+  renderToken({ token, max_requests_dia: null });
+  updateCurlExamples(token);
+  toast('Token aplicado correctamente');
 }
 
 function updateCurlExamples(token) {
@@ -1160,7 +1173,7 @@ function switchTab(ep, tab, btn) {
 // ─── Run API endpoint ─────────────────────────────────────
 async function runApi(path, responseId) {
   if (!state.apiToken) {
-    toast('No tienes un API Token asignado', 'err');
+    toast('No tienes un API Token asignado aún', 'err');
     return;
   }
 
@@ -1177,7 +1190,11 @@ async function runApi(path, responseId) {
   const t0 = Date.now();
   try {
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { 'X-API-Token': state.apiToken }
+      headers: {
+        'X-API-Token': state.apiToken,
+        'Authorization': `Bearer ${state.jwtToken || ''}`,
+        'Content-Type': 'application/json'
+      }
     });
     const elapsed = Date.now() - t0;
 
@@ -1193,13 +1210,36 @@ async function runApi(path, responseId) {
     respWrap.classList.add('visible');
 
     const statusClass = res.status < 300 ? 'status-2xx' : res.status < 500 ? 'status-4xx' : 'status-5xx';
-    const statusText = res.status === 200 ? 'OK' : res.status === 500 ? 'Internal Server Error' : res.status === 401 ? 'Unauthorized' : res.status === 403 ? 'Forbidden' : 'Error';
-    statusEl.textContent = res.status + ' ' + statusText;
+    const statusTexts = { 200: 'OK', 401: 'Unauthorized', 403: 'Forbidden', 404: 'Not Found', 500: 'Internal Server Error' };
+    statusEl.textContent = res.status + ' ' + (statusTexts[res.status] || 'Error');
     statusEl.className = `status-badge ${statusClass}`;
     timeEl.textContent = `${elapsed}ms`;
 
-    if (res.status >= 500) {
-      bodyEl.textContent = '⚠️ El servidor está experimentando problemas internos (500).\n\nPosibles causas:\n• El servidor backend en Render está reiniciando (free tier)\n• Error en la base de datos del servidor\n• Token inválido o expirado\n\nIntenta de nuevo en unos segundos.\n\nRespuesta del servidor:\n' + JSON.stringify(data, null, 2);
+    if (res.status === 500) {
+      bodyEl.textContent =
+        '⚠️ Error interno del servidor (500).\n\n' +
+        'Causas posibles:\n' +
+        '  • El servidor en Render está reiniciando (free tier duerme tras inactividad)\n' +
+        '  • El token tiene endpoints_permitidos NULL en la BD → usa el botón\n' +
+        '    "Reparar endpoints" en el panel admin (/api/admin/tokens/reparar-endpoints)\n' +
+        '  • Error de conexión a la base de datos\n\n' +
+        'Solución rápida: espera 30 s y vuelve a intentarlo.\n\n' +
+        'Respuesta del servidor:\n' + JSON.stringify(data, null, 2);
+    } else if (res.status === 403) {
+      bodyEl.textContent =
+        '🚫 Acceso denegado (403).\n\n' +
+        'Tu token no tiene permiso para este endpoint.\n\n' +
+        'Posibles causas:\n' +
+        '  • Los endpoints_permitidos de tu token no incluyen ' + path + '\n' +
+        '  • Pide al administrador que actualice los permisos de tu token\n' +
+        '    o ejecute /api/admin/tokens/reparar-endpoints\n\n' +
+        'Respuesta del servidor:\n' + JSON.stringify(data, null, 2);
+    } else if (res.status === 401) {
+      bodyEl.textContent =
+        '🔑 No autorizado (401).\n\n' +
+        'El token no fue reconocido por el servidor.\n' +
+        'Intenta cerrar sesión y volver a iniciarla para refrescar el token.\n\n' +
+        'Respuesta del servidor:\n' + JSON.stringify(data, null, 2);
     } else {
       bodyEl.textContent = JSON.stringify(data, null, 2);
     }
@@ -1209,7 +1249,10 @@ async function runApi(path, responseId) {
     statusEl.textContent = 'Error de red';
     statusEl.className = 'status-badge status-4xx';
     timeEl.textContent = '';
-    bodyEl.textContent = 'No se pudo conectar con el servidor.\n\nVerifica tu conexión a internet o que el servidor esté activo.\n\nError: ' + e.message;
+    bodyEl.textContent =
+      'No se pudo conectar con el servidor.\n\n' +
+      'Verifica tu conexión a internet o que el servidor esté activo.\n\n' +
+      'Error: ' + e.message;
   } finally {
     btn.disabled = false;
     btn.innerHTML = '▶ Ejecutar';
