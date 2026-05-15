@@ -705,10 +705,82 @@ pre.response-body {
   <div class="section" id="apis-section">
     <div class="section-header">
       <div class="section-title">APIs disponibles</div>
-      <div class="section-count" id="apis-count">3 endpoints</div>
+      <div class="section-count" id="apis-count">4 endpoints</div>
     </div>
 
     <div class="ep-grid" id="ep-grid">
+
+      <!-- /api/portal/auth/login -->
+      <div class="ep-card" id="ep-login">
+        <div class="ep-head" onclick="toggleEp('ep-login')">
+          <span class="method-badge get" style="background:rgba(245,158,11,0.15);color:#f59e0b;border-color:rgba(245,158,11,0.25);">POST</span>
+          <span class="ep-path">/api/portal/auth/login</span>
+          <span class="ep-desc">Obtener token JWT</span>
+          <span class="ep-chevron">▼</span>
+        </div>
+        <div class="ep-body">
+          <div class="ep-body-inner">
+            <div class="ep-tabs">
+              <button class="tab-btn active" onclick="switchTab('login', 'curl', this)">cURL</button>
+              <button class="tab-btn" onclick="switchTab('login', 'example', this)">Respuesta</button>
+              <button class="tab-btn" onclick="switchTab('login', 'try', this)">▶ Probar</button>
+            </div>
+
+            <div id="login-curl" class="tab-pane active">
+              <pre>curl -X POST https://crm-gestion.onrender.com/api/portal/auth/login \
+     -H <span class="code-string">"Content-Type: application/json"</span> \
+     -d <span class="code-string">'{"username":"tu_usuario","password":"tu_contraseña"}'</span></pre>
+            </div>
+
+            <div id="login-example" class="tab-pane">
+              <pre>{
+  <span class="code-keyword">"success"</span>: <span class="code-string">true</span>,
+  <span class="code-keyword">"token"</span>: <span class="code-string">"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."</span>,
+  <span class="code-keyword">"user"</span>: {
+    <span class="code-keyword">"id"</span>: <span class="code-string">1</span>,
+    <span class="code-keyword">"username"</span>: <span class="code-string">"tu_usuario"</span>,
+    <span class="code-keyword">"nombre"</span>: <span class="code-string">"Tu Nombre"</span>,
+    <span class="code-keyword">"rol"</span>: <span class="code-string">"portal"</span>,
+    <span class="code-keyword">"endpoints_permitidos"</span>: [
+      <span class="code-string">"/api/pub/clientes"</span>,
+      <span class="code-string">"/api/pub/proveedores"</span>,
+      <span class="code-string">"/api/pub/empleados"</span>
+    ],
+    <span class="code-keyword">"max_requests_dia"</span>: <span class="code-string">500</span>
+  }
+}</pre>
+              <p style="font-size:11px;color:var(--muted);margin-top:10px;">
+                ⚠️ El token JWT devuelto sirve para autenticarte en el portal, NO como <code>X-API-Token</code> para los endpoints de datos.
+                El <code>X-API-Token</code> se obtiene desde <code>GET /api/portal/mi-token</code> usando el Bearer JWT.
+              </p>
+            </div>
+
+            <div id="login-try" class="tab-pane">
+              <div class="try-it-section">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Prueba el login con cualquier usuario portal.</p>
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+                  <input type="text" id="try-login-user" placeholder="username"
+                    style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+                           padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;"
+                    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                  <input type="password" id="try-login-pass" placeholder="contraseña"
+                    style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
+                           padding:9px 12px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;"
+                    onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
+                </div>
+                <button class="btn-run" onclick="tryLogin()" id="run-login">▶ Ejecutar</button>
+                <div class="api-response" id="resp-login">
+                  <div class="response-meta">
+                    <span class="status-badge" id="resp-login-status"></span>
+                    <span class="response-time" id="resp-login-time"></span>
+                  </div>
+                  <pre class="response-body" id="resp-login-body"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- /api/pub/clientes -->
       <div class="ep-card" id="ep-clientes">
@@ -1168,6 +1240,53 @@ function switchTab(ep, tab, btn) {
   const parent = btn.closest('.ep-tabs');
   parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+}
+
+// ─── Try login endpoint ───────────────────────────────────
+async function tryLogin() {
+  const username = document.getElementById('try-login-user').value.trim();
+  const password = document.getElementById('try-login-pass').value;
+  const btn = document.getElementById('run-login');
+  const respWrap = document.getElementById('resp-login');
+  const statusEl = document.getElementById('resp-login-status');
+  const timeEl = document.getElementById('resp-login-time');
+  const bodyEl = document.getElementById('resp-login-body');
+
+  if (!username || !password) {
+    toast('Ingresa usuario y contraseña', 'err');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Ejecutando...';
+
+  const t0 = Date.now();
+  try {
+    const res = await fetch(`${API_BASE}/api/portal/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const elapsed = Date.now() - t0;
+    const data = await res.json();
+
+    respWrap.classList.add('visible');
+    const statusClass = res.ok ? 'status-2xx' : res.status < 500 ? 'status-4xx' : 'status-5xx';
+    const statusTexts = { 200: 'OK', 400: 'Bad Request', 401: 'Unauthorized', 500: 'Internal Server Error' };
+    statusEl.textContent = res.status + ' ' + (statusTexts[res.status] || 'Error');
+    statusEl.className = `status-badge ${statusClass}`;
+    timeEl.textContent = `${elapsed}ms`;
+    bodyEl.textContent = JSON.stringify(data, null, 2);
+  } catch (e) {
+    respWrap.classList.add('visible');
+    statusEl.textContent = 'Error de red';
+    statusEl.className = 'status-badge status-4xx';
+    timeEl.textContent = '';
+    bodyEl.textContent = 'No se pudo conectar: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Ejecutar';
+  }
 }
 
 // ─── Run API endpoint ─────────────────────────────────────
