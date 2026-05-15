@@ -3,281 +3,877 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Portal de API — CRM Ing Software</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>Portal API — CRM Ing Software</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#0a0e1a;--surface:#111827;--surface2:#1a2236;--border:#1e3a5f;
-  --accent:#3b82f6;--accent2:#06b6d4;--green:#10b981;--red:#ef4444;
-  --text:#e2e8f0;--muted:#64748b;--mono:'DM Mono',monospace;
+:root {
+  --bg: #060a12;
+  --surface: #0d1424;
+  --surface2: #131d30;
+  --border: rgba(99,179,237,0.12);
+  --border-bright: rgba(99,179,237,0.35);
+  --accent: #3b82f6;
+  --accent-glow: rgba(59,130,246,0.25);
+  --cyan: #06b6d4;
+  --green: #10b981;
+  --green-glow: rgba(16,185,129,0.2);
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --text: #e2e8f0;
+  --muted: #64748b;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Space Grotesk', sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'Syne',sans-serif;min-height:100vh;overflow-x:hidden}
-body::before{content:'';position:fixed;inset:0;
-  background-image:linear-gradient(rgba(59,130,246,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.04) 1px,transparent 1px);
-  background-size:48px 48px;pointer-events:none;z-index:0;}
-.orb{position:fixed;width:600px;height:600px;border-radius:50%;
-  background:radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%);
-  top:-200px;right:-200px;pointer-events:none;z-index:0;}
 
-/* NAV */
-nav{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;
-    padding:16px 48px;border-bottom:1px solid var(--border);background:rgba(10,14,26,0.92);backdrop-filter:blur(12px);}
-.nav-logo{font-size:20px;font-weight:800;}.nav-logo span{color:var(--accent);}
-.nav-badge{font-family:var(--mono);font-size:11px;background:rgba(59,130,246,0.15);
-  color:var(--accent);padding:4px 10px;border-radius:20px;border:1px solid rgba(59,130,246,0.3);}
-.nav-btn{padding:8px 18px;border-radius:20px;font-family:'Syne',sans-serif;font-size:13px;
-  font-weight:700;cursor:pointer;background:var(--accent);color:#fff;border:none;transition:background 0.2s;}
-.nav-btn:hover{background:#2563eb;}
-.nav-user{display:flex;align-items:center;gap:12px;}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
 
-/* HERO */
-.hero{position:relative;z-index:1;text-align:center;padding:72px 24px 48px;}
-.eyebrow{font-family:var(--mono);font-size:12px;color:var(--accent2);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px;}
-h1{font-size:clamp(36px,6vw,68px);font-weight:800;letter-spacing:-2px;line-height:1.05;
-   background:linear-gradient(135deg,#fff 30%,var(--accent) 70%,var(--accent2) 100%);
-   -webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:20px;}
-.hero-sub{color:var(--muted);font-size:17px;max-width:540px;margin:0 auto 48px;line-height:1.6;font-weight:400;}
-.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:64px;}
-.btn-hero{padding:13px 26px;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.2s;}
-.btn-p{background:var(--accent);color:#fff;border:none;}.btn-p:hover{background:#2563eb;transform:translateY(-1px);}
-.btn-g{background:transparent;color:var(--text);border:1px solid var(--border);}.btn-g:hover{border-color:var(--accent);color:var(--accent);}
-
-/* PASOS */
-.steps{display:flex;justify-content:center;gap:0;max-width:680px;margin:0 auto 80px;padding:0 24px;}
-.step{flex:1;text-align:center;position:relative;padding:0 8px;}
-.step:not(:last-child)::after{content:'';position:absolute;top:18px;left:calc(50% + 18px);right:calc(-50% + 18px);height:2px;background:var(--border);}
-.step-num{width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;font-weight:800;font-size:14px;
-  display:flex;align-items:center;justify-content:center;margin:0 auto 10px;}
-.step h4{font-size:12px;font-weight:700;margin-bottom:3px;}
-.step p{font-size:11px;color:var(--muted);}
-
-/* FEATURES */
-.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-  gap:16px;max-width:880px;margin:0 auto 80px;padding:0 24px;}
-.feature{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;transition:border-color 0.2s,transform 0.2s;}
-.feature:hover{border-color:var(--accent);transform:translateY(-2px);}
-.fi{font-size:26px;margin-bottom:10px;}.feature h3{font-size:14px;font-weight:700;margin-bottom:5px;}
-.feature p{font-size:12px;color:var(--muted);line-height:1.5;}
-
-/* APIS */
-.section{max-width:840px;margin:0 auto 80px;padding:0 24px;}
-.section-title{font-size:26px;font-weight:800;margin-bottom:6px;}
-.section-sub{color:var(--muted);font-size:13px;margin-bottom:24px;}
-code{color:var(--accent2);font-family:var(--mono);font-size:13px;}
-.ep-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:10px;overflow:hidden;}
-.ep-head{display:flex;align-items:center;gap:14px;padding:14px 20px;cursor:pointer;user-select:none;transition:background 0.15s;}
-.ep-head:hover{background:var(--surface2);}
-.badge-method{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:5px;min-width:48px;text-align:center;}
-.get{background:rgba(16,185,129,0.15);color:var(--green);}
-.ep-path{font-family:var(--mono);font-size:13px;}
-.ep-desc{font-size:13px;color:var(--muted);margin-left:auto;}
-.ep-body{padding:18px 20px;border-top:1px solid var(--border);display:none;}
-.ep-body.open{display:block;}
-pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px;
-  font-family:var(--mono);font-size:12px;overflow-x:auto;color:#a5d6ff;white-space:pre-wrap;line-height:1.6;}
-
-/* FORM */
-.form-section{max-width:580px;margin:0 auto;padding:0 24px 100px;}
-.form-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;position:relative;overflow:hidden;}
-.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));}
-.form-title{font-size:22px;font-weight:800;margin-bottom:6px;}
-.form-sub{color:var(--muted);font-size:13px;margin-bottom:28px;line-height:1.5;}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.field{margin-bottom:16px;}
-.field label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.req{color:var(--accent);}
-.field input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;
-  padding:11px 14px;color:var(--text);font-family:'Syne',sans-serif;font-size:14px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;}
-.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,0.1);}
-.field input::placeholder{color:var(--muted);}
-
-/* API OPTIONS */
-.api-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px;}
-.api-opt{display:flex;align-items:flex-start;gap:10px;background:var(--surface2);border:2px solid var(--border);
-  border-radius:10px;padding:12px;cursor:pointer;transition:all 0.15s;user-select:none;}
-.api-opt:hover{border-color:rgba(59,130,246,0.5);}
-.api-opt.sel{border-color:var(--accent);background:rgba(59,130,246,0.07);}
-.api-opt input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer;margin-top:2px;flex-shrink:0;}
-.api-opt-path{font-family:var(--mono);font-size:12px;color:var(--text);display:block;}
-.api-opt-desc{font-size:11px;color:var(--muted);display:block;margin-top:2px;}
-
-.btn-submit{width:100%;background:linear-gradient(135deg,var(--accent),#2563eb);color:#fff;border:none;
-  border-radius:10px;padding:14px;font-family:'Syne',sans-serif;font-size:15px;font-weight:700;
-  cursor:pointer;transition:all 0.2s;letter-spacing:0.3px;margin-top:6px;}
-.btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(59,130,246,0.3);}
-.btn-submit:disabled{background:var(--surface2);color:var(--muted);cursor:default;transform:none;box-shadow:none;}
-
-.alert-err{background:rgba(239,68,68,0.1);border:1px solid var(--red);color:#fca5a5;
-  padding:12px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;display:none;}
-
-/* SUCCESS */
-.success-wrap{text-align:center;padding:8px 0;}
-.success-ico{font-size:52px;margin-bottom:16px;}
-.success-ttl{font-size:22px;font-weight:800;color:var(--green);margin-bottom:10px;}
-.success-msg{color:var(--muted);font-size:13px;line-height:1.7;}
-.success-box{background:var(--surface2);border:1px solid var(--border);border-radius:10px;
-  padding:16px;font-size:13px;margin:20px 0;text-align:left;line-height:1.8;}
-
-/* TOAST */
-#toast{position:fixed;bottom:24px;right:24px;z-index:100;padding:12px 18px;border-radius:10px;
-  font-size:13px;font-weight:600;transform:translateY(60px);opacity:0;transition:all 0.3s;pointer-events:none;}
-#toast.show{transform:translateY(0);opacity:1;}
-#toast.ok{background:#064e3b;color:#6ee7b7;border:1px solid #059669;}
-#toast.err{background:#450a0a;color:#fca5a5;border:1px solid var(--red);}
-
-/* LOGIN SCREEN */
-.login-screen{
-  position:fixed; inset:0; background:var(--bg); z-index:1000;
-  display:flex; align-items:center; justify-content:center;
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
-.login-card{
-  background:var(--surface); border:1px solid var(--border); border-radius:20px;
-  padding:40px; max-width:420px; width:90%; text-align:center;
+
+/* === BACKGROUND EFFECTS === */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
 }
-.login-card h2{ font-size:24px; font-weight:800; margin-bottom:8px; }
-.login-sub{ color:var(--muted); font-size:13px; margin-bottom:28px; }
-.login-error{
-  background:rgba(239,68,68,0.1); border:1px solid var(--red);
-  padding:10px; border-radius:8px; font-size:13px; margin-bottom:16px; color:#fca5a5;
+.bg-orb {
+  position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+  filter: blur(80px);
 }
-.btn-login{
-  width:100%; background:var(--accent); color:#fff; border:none;
-  padding:12px; border-radius:10px; font-weight:700; font-size:14px;
-  cursor:pointer; margin-top:8px;
+.bg-orb-1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%);
+  top: -150px; right: -150px;
 }
-.btn-login:hover{background:#2563eb;}
-.login-footer{ margin-top:24px; font-size:12px; color:var(--muted); }
-.login-footer a{ color:var(--accent); text-decoration:none; cursor:pointer; }
+.bg-orb-2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
+  bottom: -100px; left: -100px;
+}
+
+/* === LOGIN SCREEN === */
+#login-screen {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg);
+}
+
+.login-wrap {
+  width: 100%; max-width: 420px; padding: 24px;
+  animation: fadeUp 0.5s ease both;
+}
+
+.login-brand {
+  text-align: center; margin-bottom: 36px;
+}
+.login-brand .logo-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: linear-gradient(135deg, #1e3a5f, #2563eb);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; margin: 0 auto 16px;
+  box-shadow: 0 0 30px rgba(59,130,246,0.3);
+}
+.login-brand h1 {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+  margin-bottom: 4px;
+}
+.login-brand p {
+  font-size: 13px; color: var(--muted);
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.login-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+}
+
+.field {
+  margin-bottom: 16px;
+}
+.field label {
+  display: block;
+  font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--muted); margin-bottom: 8px;
+}
+.field input {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.field input::placeholder { color: var(--muted); }
+
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), #1d4ed8);
+  color: #fff; border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-family: var(--sans);
+  font-size: 14px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 4px;
+  position: relative; overflow: hidden;
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(59,130,246,0.35);
+}
+.btn-primary:disabled {
+  background: var(--surface2); color: var(--muted);
+  transform: none; box-shadow: none; cursor: default;
+}
+.btn-primary .btn-loader {
+  display: none;
+}
+.btn-primary.loading .btn-loader {
+  display: inline-block;
+}
+.btn-primary.loading .btn-text {
+  display: none;
+}
+
+.alert {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: none;
+}
+.alert-err {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #fca5a5;
+}
+.alert-ok {
+  background: rgba(16,185,129,0.1);
+  border: 1px solid rgba(16,185,129,0.3);
+  color: #6ee7b7;
+}
+
+/* === MAIN PORTAL === */
+#portal {
+  display: none;
+  position: relative; z-index: 1;
+  min-height: 100vh;
+}
+
+/* === NAV === */
+nav {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 32px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(6,10,18,0.92);
+  backdrop-filter: blur(16px);
+}
+.nav-logo {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.3px;
+}
+.nav-logo span { color: var(--accent); }
+.nav-right {
+  display: flex; align-items: center; gap: 12px;
+}
+.nav-user-badge {
+  font-size: 12px; font-weight: 500;
+  background: rgba(59,130,246,0.1);
+  border: 1px solid rgba(59,130,246,0.2);
+  color: var(--cyan);
+  padding: 5px 12px; border-radius: 20px;
+  font-family: var(--mono);
+}
+.btn-logout {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+/* === HERO SECTION === */
+.hero {
+  padding: 48px 32px 32px;
+  max-width: 900px; margin: 0 auto;
+}
+.hero-greeting {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 2px; color: var(--cyan); margin-bottom: 12px;
+  font-family: var(--mono);
+}
+.hero-title {
+  font-size: clamp(26px, 4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+.hero-title span {
+  background: linear-gradient(135deg, var(--accent), var(--cyan));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+
+/* === TOKEN CARD (HERO ELEMENT) === */
+.token-hero {
+  max-width: 900px; margin: 0 auto 40px; padding: 0 32px;
+}
+.token-card {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 20px;
+  padding: 28px 32px;
+  position: relative; overflow: hidden;
+  animation: fadeUp 0.4s ease 0.2s both;
+}
+.token-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--green), var(--cyan), var(--accent));
+}
+.token-card-top {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+}
+.token-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 1.5px; color: var(--green);
+  display: flex; align-items: center; gap: 6px;
+}
+.token-label::before {
+  content: '';
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 2s infinite;
+}
+.token-meta {
+  font-size: 11px; color: var(--muted); font-family: var(--mono);
+}
+.token-display {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--cyan);
+  word-break: break-all;
+  line-height: 1.5;
+  margin-bottom: 14px;
+  position: relative;
+}
+.token-display.hidden-token {
+  filter: blur(6px);
+  user-select: none;
+}
+.token-no-token {
+  font-family: var(--mono); font-size: 13px;
+  color: var(--amber); padding: 16px 20px;
+  background: rgba(245,158,11,0.08);
+  border: 1px dashed rgba(245,158,11,0.3);
+  border-radius: 12px; margin-bottom: 14px;
+}
+.token-actions {
+  display: flex; gap: 8px; flex-wrap: wrap;
+}
+.btn-sm {
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+}
+.btn-copy {
+  background: rgba(59,130,246,0.15);
+  color: var(--accent);
+  border: 1px solid rgba(59,130,246,0.3);
+}
+.btn-copy:hover { background: rgba(59,130,246,0.25); }
+.btn-toggle-vis {
+  background: rgba(100,116,139,0.15);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-toggle-vis:hover { border-color: var(--border-bright); color: var(--text); }
+
+/* === ENDPOINTS === */
+.section {
+  max-width: 900px; margin: 0 auto 48px; padding: 0 32px;
+}
+.section-header {
+  display: flex; align-items: baseline; gap: 10px;
+  margin-bottom: 20px;
+}
+.section-title {
+  font-size: 18px; font-weight: 700; letter-spacing: -0.3px;
+}
+.section-count {
+  font-size: 12px; font-family: var(--mono);
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 2px 8px; border-radius: 10px;
+}
+
+.ep-grid {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.ep-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.ep-card:hover { border-color: var(--border-bright); }
+.ep-card.open { border-color: var(--accent); }
+
+.ep-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 20px; cursor: pointer; user-select: none;
+  transition: background 0.15s;
+}
+.ep-head:hover { background: var(--surface2); }
+
+.method-badge {
+  font-family: var(--mono);
+  font-size: 10px; font-weight: 700;
+  padding: 4px 10px; border-radius: 5px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  min-width: 44px; text-align: center; flex-shrink: 0;
+}
+.get { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid rgba(16,185,129,0.2); }
+
+.ep-path {
+  font-family: var(--mono);
+  font-size: 13px; color: var(--text);
+}
+.ep-desc {
+  font-size: 12px; color: var(--muted);
+  margin-left: auto; flex-shrink: 0;
+}
+.ep-chevron {
+  font-size: 10px; color: var(--muted); flex-shrink: 0;
+  transition: transform 0.2s;
+}
+.ep-card.open .ep-chevron { transform: rotate(180deg); }
+
+.ep-body {
+  padding: 0 20px;
+  max-height: 0; overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+.ep-card.open .ep-body {
+  max-height: 800px;
+  padding: 0 20px 20px;
+}
+
+.ep-body-inner { border-top: 1px solid var(--border); padding-top: 16px; }
+
+.ep-tabs {
+  display: flex; gap: 4px; margin-bottom: 12px;
+}
+.tab-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: none;
+  color: var(--muted);
+  background: transparent;
+}
+.tab-btn.active {
+  background: rgba(59,130,246,0.15);
+  color: var(--accent);
+}
+.tab-btn:hover:not(.active) { color: var(--text); }
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+pre {
+  background: #0a0f1a;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-family: var(--mono);
+  font-size: 12px; line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #94a3b8;
+}
+.code-keyword { color: var(--cyan); }
+.code-string { color: #86efac; }
+.code-comment { color: var(--muted); }
+.code-token { color: var(--amber); }
+
+/* TRY IT */
+.try-it-section { margin-top: 12px; }
+.try-it-row {
+  display: flex; gap: 8px; margin-bottom: 8px; align-items: center;
+}
+.try-it-label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); margin-bottom: 6px;
+}
+.btn-run {
+  background: linear-gradient(135deg, var(--green), #059669);
+  color: #fff; border: none;
+  padding: 8px 18px; border-radius: 8px;
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 6px;
+}
+.btn-run:hover { transform: translateY(-1px); box-shadow: 0 4px 15px var(--green-glow); }
+.btn-run:disabled { background: var(--surface2); color: var(--muted); transform: none; box-shadow: none; cursor: default; }
+
+.api-response {
+  display: none; margin-top: 12px;
+}
+.api-response.visible { display: block; }
+.response-meta {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 6px;
+}
+.status-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 3px 8px; border-radius: 5px;
+}
+.status-2xx { background: rgba(16,185,129,0.15); color: var(--green); }
+.status-4xx { background: rgba(239,68,68,0.15); color: var(--red); }
+.status-5xx { background: rgba(239,68,68,0.15); color: var(--red); }
+.response-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+
+pre.response-body {
+  max-height: 280px; overflow-y: auto;
+  color: #94a3b8;
+}
+
+/* === REQUEST FORM === */
+.request-section {
+  max-width: 900px; margin: 0 auto 80px; padding: 0 32px;
+}
+.form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative; overflow: hidden;
+}
+.form-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--cyan));
+}
+.form-card-title {
+  font-size: 18px; font-weight: 700; margin-bottom: 4px;
+}
+.form-card-sub {
+  font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.5;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field label span.req { color: var(--accent); }
+
+.api-checks {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px; margin-top: 8px;
+}
+.api-check {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--surface2);
+  border: 2px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  cursor: pointer; transition: all 0.15s; user-select: none;
+}
+.api-check:hover { border-color: rgba(59,130,246,0.4); }
+.api-check.selected { border-color: var(--accent); background: rgba(59,130,246,0.06); }
+.api-check input { accent-color: var(--accent); width: 15px; height: 15px; margin-top: 2px; flex-shrink: 0; }
+.api-check-path { font-family: var(--mono); font-size: 12px; display: block; }
+.api-check-desc { font-size: 11px; color: var(--muted); display: block; margin-top: 2px; }
+
+.btn-submit {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent), #1d4ed8);
+  color: #fff; border: none;
+  border-radius: 10px; padding: 14px;
+  font-family: var(--sans); font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s;
+  margin-top: 8px;
+}
+.btn-submit:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(59,130,246,0.3); }
+.btn-submit:disabled { background: var(--surface2); color: var(--muted); transform: none; box-shadow: none; cursor: default; }
+
+.success-state {
+  text-align: center; padding: 20px 0;
+}
+.success-icon { font-size: 48px; margin-bottom: 16px; }
+.success-title { font-size: 22px; font-weight: 700; color: var(--green); margin-bottom: 8px; }
+.success-msg { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.success-detail {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+  font-size: 13px; margin: 16px 0; text-align: left; line-height: 1.8;
+}
+
+/* === TOAST === */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 200;
+  padding: 12px 18px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  transform: translateY(60px); opacity: 0;
+  transition: all 0.3s; pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.ok { background: #064e3b; color: #6ee7b7; border: 1px solid #059669; }
+#toast.err { background: #450a0a; color: #fca5a5; border: 1px solid var(--red); }
+
+/* === ANIMATIONS === */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 600px) {
+  nav { padding: 12px 16px; }
+  .hero, .token-hero, .section, .request-section { padding-left: 16px; padding-right: 16px; }
+  .form-row { grid-template-columns: 1fr; }
+  .ep-desc { display: none; }
+  .token-card { padding: 20px; }
+}
+
+/* Spinner */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
-<div class="orb"></div>
 
-<!-- Pantalla de Login -->
-<div id="login-screen" class="login-screen">
-  <div class="login-card">
-    <div style="font-size:48px;margin-bottom:20px;">🔑</div>
-    <h2>Acceso al Portal API</h2>
-    <p class="login-sub">Ingresa con tus credenciales proporcionadas por el administrador</p>
-    
-    <div id="login-error" class="login-error" style="display:none;"></div>
-    
-    <div class="field">
-      <label>Usuario</label>
-      <input type="text" id="login-username" placeholder="Tu usuario">
+<div class="bg-grid"></div>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+
+<!-- ═══════════════════════════════════════════════
+     LOGIN
+════════════════════════════════════════════════ -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-brand">
+      <div class="logo-icon">🔌</div>
+      <h1>Portal API — CRM</h1>
+      <p>Ingresa con tus credenciales de estudiante</p>
     </div>
-    <div class="field">
-      <label>Contraseña</label>
-      <input type="password" id="login-password" placeholder="Tu contraseña">
+    <div class="login-card">
+      <div id="login-err" class="alert alert-err"></div>
+
+      <div class="field">
+        <label>Usuario</label>
+        <input type="text" id="inp-user" placeholder="Tu usuario" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="inp-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn-primary" id="btn-login" onclick="doLogin()">
+        <span class="btn-text">Iniciar sesión →</span>
+        <span class="btn-loader"><span class="spinner"></span> Verificando...</span>
+      </button>
     </div>
-    
-    <button class="btn-login" onclick="loginPortal()">Iniciar Sesión</button>
-    
-    <p class="login-footer">¿No tienes cuenta? <a href="#" onclick="mostrarSolicitud()">Solicita acceso aquí</a></p>
+
+    <p style="text-align:center;margin-top:20px;font-size:12px;color:var(--muted);">
+      ¿No tienes cuenta?
+      <a href="#" onclick="showPublicForm()" style="color:var(--accent);text-decoration:none;">Solicita acceso aquí</a>
+    </p>
   </div>
 </div>
 
-<!-- Contenido principal del portal (oculto hasta login) -->
-<div id="contenido-portal" style="display:none;">
+<!-- ═══════════════════════════════════════════════
+     PORTAL (después del login)
+════════════════════════════════════════════════ -->
+<div id="portal">
+
   <!-- NAV -->
   <nav>
     <div class="nav-logo">CRM <span>API</span></div>
-    <div class="nav-badge">v1.0 · REST · JSON</div>
-    <div class="nav-user" id="user-info">
-      <span class="nav-badge" id="user-name-display"></span>
-      <button class="nav-btn" onclick="cerrarSesionPortal()" style="background:transparent;border:1px solid var(--border);">🚪 Salir</button>
+    <div class="nav-right">
+      <span class="nav-user-badge" id="nav-username"></span>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
     </div>
   </nav>
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="eyebrow">🔌 Portal Público — Ing. Software USAC</div>
-    <h1>Accede a los<br>datos del CRM</h1>
-    <p class="hero-sub">Solicita tu token de acceso a la API. Sin registro previo — solo llena el formulario con tus datos de estudiante.</p>
-    <div class="hero-btns">
-      <button class="btn-hero btn-p" onclick="document.getElementById('solicitar').scrollIntoView({behavior:'smooth'})">📝 Solicitar acceso</button>
-      <button class="btn-hero btn-g" onclick="document.getElementById('apis').scrollIntoView({behavior:'smooth'})">📚 Ver APIs disponibles</button>
-    </div>
-    <div class="steps">
-      <div class="step"><div class="step-num">1</div><h4>Llena el formulario</h4><p>Con tus datos de estudiante</p></div>
-      <div class="step"><div class="step-num">2</div><h4>Admin lo revisa</h4><p>En 24–48 horas</p></div>
-      <div class="step"><div class="step-num">3</div><h4>Recibes el token</h4><p>En tu correo estudiantil</p></div>
-      <div class="step"><div class="step-num">4</div><h4>Consume la API</h4><p>Con X-API-Token</p></div>
-    </div>
-  </section>
-
-  <!-- FEATURES -->
-  <div class="features">
-    <div class="feature"><div class="fi">🔐</div><h3>Acceso controlado</h3><p>El admin aprueba cada solicitud manualmente.</p></div>
-    <div class="feature"><div class="fi">📊</div><h3>Monitoreo total</h3><p>Cada llamada queda registrada con IP y resultado.</p></div>
-    <div class="feature"><div class="fi">⚡</div><h3>Token personalizado</h3><p>Solo accedes a las APIs que solicitaste.</p></div>
-    <div class="feature"><div class="fi">🛡️</div><h3>Límite diario</h3><p>El admin configura cuántas requests puedes hacer por día.</p></div>
+  <div class="hero">
+    <div class="hero-greeting" id="greeting-text">● PORTAL DE API</div>
+    <h1 class="hero-title">Tu <span id="hero-name">Token</span><br>de acceso</h1>
   </div>
 
-  <!-- APIs DISPONIBLES -->
-  <div class="section" id="apis">
-    <div class="section-title">📚 APIs disponibles</div>
-    <div class="section-sub">Usa el header <code>X-API-Token: TU_TOKEN</code> en cada petición. Haz clic en un endpoint para ver más detalles.</div>
+  <!-- TOKEN CARD -->
+  <div class="token-hero">
+    <div class="token-card">
+      <div class="token-card-top">
+        <div class="token-label">API Token activo</div>
+        <div class="token-meta" id="token-meta-info"></div>
+      </div>
 
-    <div class="ep-card">
-      <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
-        <span class="badge-method get">GET</span>
-        <span class="ep-path">/api/pub/clientes</span>
-        <span class="ep-desc">Lista clientes activos</span>
+      <!-- Token display (loaded dynamically) -->
+      <div id="token-display-wrap">
+        <div class="token-display" id="token-display-text">
+          Cargando token...
+        </div>
       </div>
-      <div class="ep-body">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 clientes con estado Activo.</p>
-        <pre>curl https://crm-gestion.onrender.com/api/pub/clientes \
-     -H "X-API-Token: TU_TOKEN"</pre>
-        <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
-        <pre>{ "clientes": [{ "id_cliente": 1, "nombre": "Juan Pérez", "correo": "juan@mail.com", "estado": "Activo" }], "total": 1 }</pre>
-      </div>
-    </div>
 
-    <div class="ep-card">
-      <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
-        <span class="badge-method get">GET</span>
-        <span class="ep-path">/api/pub/proveedores</span>
-        <span class="ep-desc">Lista proveedores activos</span>
-      </div>
-      <div class="ep-body">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 proveedores con su categoría.</p>
-        <pre>curl https://crm-gestion.onrender.com/api/pub/proveedores \
-     -H "X-API-Token: TU_TOKEN"</pre>
-        <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
-        <pre>{ "proveedores": [{ "id_proveedor": 1, "nombre_empresa": "Tech S.A.", "nit": "123456-7", "estado": "Activo", "nombre_categoria": "Tecnología" }], "total": 1 }</pre>
-      </div>
-    </div>
-
-    <div class="ep-card">
-      <div class="ep-head" onclick="this.nextElementSibling.classList.toggle('open')">
-        <span class="badge-method get">GET</span>
-        <span class="ep-path">/api/pub/empleados</span>
-        <span class="ep-desc">Lista empleados activos</span>
-      </div>
-      <div class="ep-body">
-        <p style="font-size:13px;color:var(--muted);margin-bottom:10px;">Devuelve hasta 100 empleados con su dependencia.</p>
-        <pre>curl https://crm-gestion.onrender.com/api/pub/empleados \
-     -H "X-API-Token: TU_TOKEN"</pre>
-        <p style="font-size:11px;color:var(--muted);margin:10px 0 6px;font-family:var(--mono);">// Respuesta</p>
-        <pre>{ "empleados": [{ "id_empleado": 1, "nombre": "María López", "cargo": "Analista", "estado": "Activo", "nombre_dependencia": "Sistemas" }], "total": 1 }</pre>
+      <div class="token-actions">
+        <button class="btn-sm btn-copy" onclick="copyToken()" id="btn-copy-token">
+          📋 Copiar token
+        </button>
+        <button class="btn-sm btn-toggle-vis" onclick="toggleTokenVis()" id="btn-vis">
+          👁 Ocultar
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- FORMULARIO -->
-  <div class="form-section" id="solicitar">
+  <!-- CURL QUICK-USE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Cómo usar tu token</div>
+    </div>
+    <pre id="curl-example">curl https://crm-gestion.onrender.com/api/pub/clientes \
+     -H "X-API-Token: <span class="code-token">TU_TOKEN</span>"</pre>
+  </div>
+
+  <!-- APIS DISPONIBLES -->
+  <div class="section" id="apis-section">
+    <div class="section-header">
+      <div class="section-title">APIs disponibles</div>
+      <div class="section-count" id="apis-count">3 endpoints</div>
+    </div>
+
+    <div class="ep-grid" id="ep-grid">
+
+      <!-- /api/pub/clientes -->
+      <div class="ep-card" id="ep-clientes">
+        <div class="ep-head" onclick="toggleEp('ep-clientes')">
+          <span class="method-badge get">GET</span>
+          <span class="ep-path">/api/pub/clientes</span>
+          <span class="ep-desc">Lista clientes activos</span>
+          <span class="ep-chevron">▼</span>
+        </div>
+        <div class="ep-body">
+          <div class="ep-body-inner">
+            <div class="ep-tabs">
+              <button class="tab-btn active" onclick="switchTab('clientes', 'curl', this)">cURL</button>
+              <button class="tab-btn" onclick="switchTab('clientes', 'example', this)">Respuesta</button>
+              <button class="tab-btn" onclick="switchTab('clientes', 'try', this)">▶ Probar</button>
+            </div>
+
+            <div id="clientes-curl" class="tab-pane active">
+              <pre id="curl-clientes">curl https://crm-gestion.onrender.com/api/pub/clientes \
+     -H "X-API-Token: <span class="code-token">TU_TOKEN</span>"</pre>
+            </div>
+            <div id="clientes-example" class="tab-pane">
+              <pre>{
+  <span class="code-keyword">"clientes"</span>: [
+    {
+      <span class="code-keyword">"id_cliente"</span>: <span class="code-string">1</span>,
+      <span class="code-keyword">"nombre"</span>: <span class="code-string">"Juan Pérez"</span>,
+      <span class="code-keyword">"correo"</span>: <span class="code-string">"juan@mail.com"</span>,
+      <span class="code-keyword">"estado"</span>: <span class="code-string">"Activo"</span>
+    }
+  ],
+  <span class="code-keyword">"total"</span>: <span class="code-string">1</span>
+}</pre>
+            </div>
+            <div id="clientes-try" class="tab-pane">
+              <div class="try-it-section">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Ejecuta la llamada real con tu token.</p>
+                <button class="btn-run" onclick="runApi('/api/pub/clientes', 'resp-clientes')" id="run-clientes">
+                  ▶ Ejecutar
+                </button>
+                <div class="api-response" id="resp-clientes">
+                  <div class="response-meta">
+                    <span class="status-badge" id="resp-clientes-status"></span>
+                    <span class="response-time" id="resp-clientes-time"></span>
+                  </div>
+                  <pre class="response-body" id="resp-clientes-body"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- /api/pub/proveedores -->
+      <div class="ep-card" id="ep-proveedores">
+        <div class="ep-head" onclick="toggleEp('ep-proveedores')">
+          <span class="method-badge get">GET</span>
+          <span class="ep-path">/api/pub/proveedores</span>
+          <span class="ep-desc">Lista proveedores activos</span>
+          <span class="ep-chevron">▼</span>
+        </div>
+        <div class="ep-body">
+          <div class="ep-body-inner">
+            <div class="ep-tabs">
+              <button class="tab-btn active" onclick="switchTab('proveedores', 'curl', this)">cURL</button>
+              <button class="tab-btn" onclick="switchTab('proveedores', 'example', this)">Respuesta</button>
+              <button class="tab-btn" onclick="switchTab('proveedores', 'try', this)">▶ Probar</button>
+            </div>
+            <div id="proveedores-curl" class="tab-pane active">
+              <pre id="curl-proveedores">curl https://crm-gestion.onrender.com/api/pub/proveedores \
+     -H "X-API-Token: <span class="code-token">TU_TOKEN</span>"</pre>
+            </div>
+            <div id="proveedores-example" class="tab-pane">
+              <pre>{
+  <span class="code-keyword">"proveedores"</span>: [
+    {
+      <span class="code-keyword">"id_proveedor"</span>: <span class="code-string">1</span>,
+      <span class="code-keyword">"nombre_empresa"</span>: <span class="code-string">"Tech S.A."</span>,
+      <span class="code-keyword">"nit"</span>: <span class="code-string">"123456-7"</span>,
+      <span class="code-keyword">"estado"</span>: <span class="code-string">"Activo"</span>
+    }
+  ],
+  <span class="code-keyword">"total"</span>: <span class="code-string">1</span>
+}</pre>
+            </div>
+            <div id="proveedores-try" class="tab-pane">
+              <div class="try-it-section">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Ejecuta la llamada real con tu token.</p>
+                <button class="btn-run" onclick="runApi('/api/pub/proveedores', 'resp-proveedores')" id="run-proveedores">
+                  ▶ Ejecutar
+                </button>
+                <div class="api-response" id="resp-proveedores">
+                  <div class="response-meta">
+                    <span class="status-badge" id="resp-proveedores-status"></span>
+                    <span class="response-time" id="resp-proveedores-time"></span>
+                  </div>
+                  <pre class="response-body" id="resp-proveedores-body"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- /api/pub/empleados -->
+      <div class="ep-card" id="ep-empleados">
+        <div class="ep-head" onclick="toggleEp('ep-empleados')">
+          <span class="method-badge get">GET</span>
+          <span class="ep-path">/api/pub/empleados</span>
+          <span class="ep-desc">Lista empleados activos</span>
+          <span class="ep-chevron">▼</span>
+        </div>
+        <div class="ep-body">
+          <div class="ep-body-inner">
+            <div class="ep-tabs">
+              <button class="tab-btn active" onclick="switchTab('empleados', 'curl', this)">cURL</button>
+              <button class="tab-btn" onclick="switchTab('empleados', 'example', this)">Respuesta</button>
+              <button class="tab-btn" onclick="switchTab('empleados', 'try', this)">▶ Probar</button>
+            </div>
+            <div id="empleados-curl" class="tab-pane active">
+              <pre id="curl-empleados">curl https://crm-gestion.onrender.com/api/pub/empleados \
+     -H "X-API-Token: <span class="code-token">TU_TOKEN</span>"</pre>
+            </div>
+            <div id="empleados-example" class="tab-pane">
+              <pre>{
+  <span class="code-keyword">"empleados"</span>: [
+    {
+      <span class="code-keyword">"id_empleado"</span>: <span class="code-string">1</span>,
+      <span class="code-keyword">"nombre"</span>: <span class="code-string">"María López"</span>,
+      <span class="code-keyword">"cargo"</span>: <span class="code-string">"Analista"</span>,
+      <span class="code-keyword">"estado"</span>: <span class="code-string">"Activo"</span>
+    }
+  ],
+  <span class="code-keyword">"total"</span>: <span class="code-string">1</span>
+}</pre>
+            </div>
+            <div id="empleados-try" class="tab-pane">
+              <div class="try-it-section">
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Ejecuta la llamada real con tu token.</p>
+                <button class="btn-run" onclick="runApi('/api/pub/empleados', 'resp-empleados')" id="run-empleados">
+                  ▶ Ejecutar
+                </button>
+                <div class="api-response" id="resp-empleados">
+                  <div class="response-meta">
+                    <span class="status-badge" id="resp-empleados-status"></span>
+                    <span class="response-time" id="resp-empleados-time"></span>
+                  </div>
+                  <pre class="response-body" id="resp-empleados-body"></pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /ep-grid -->
+  </div><!-- /section -->
+
+  <!-- SOLICITUD DE ACCESO (visible siempre, scroll) -->
+  <div class="request-section" id="solicitar">
+    <div class="section-header" style="margin-bottom:20px;">
+      <div class="section-title">Solicitar acceso a la API</div>
+    </div>
     <div class="form-card" id="form-card">
-      <div class="form-title">Solicitar acceso a la API</div>
-      <div class="form-sub">Sin registro previo. Llena tus datos y el administrador te enviará tu token al correo estudiantil.</div>
+      <div class="form-card-sub">
+        Sin registro previo. Llena tus datos y el administrador te enviará tu token al correo estudiantil.
+      </div>
 
-      <div id="form-alert" class="alert-err"></div>
+      <div id="form-alert" class="alert alert-err"></div>
 
       <div class="form-row">
         <div class="field">
           <label>Nombre completo <span class="req">*</span></label>
-          <input type="text" id="f-nombre" placeholder="Tu nombre completo" autocomplete="name">
+          <input type="text" id="f-nombre" placeholder="Tu nombre completo">
         </div>
         <div class="field">
           <label>No. de carnet <span class="req">*</span></label>
@@ -287,7 +883,7 @@ pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:
       <div class="form-row">
         <div class="field">
           <label>Teléfono</label>
-          <input type="tel" id="f-telefono" placeholder="+502 0000-0000">
+          <input type="tel" id="f-tel" placeholder="+502 0000-0000">
         </div>
         <div class="field">
           <label>Correo estudiantil <span class="req">*</span></label>
@@ -296,22 +892,31 @@ pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:
       </div>
       <div class="field">
         <label>Número de grupo <span class="req">*</span></label>
-        <input type="text" id="f-grupo" placeholder="Ej: Grupo 1, Sección A, Grupo B...">
+        <input type="text" id="f-grupo" placeholder="Ej: Grupo 1, Sección A...">
       </div>
       <div class="field">
         <label>APIs que deseas habilitar <span class="req">*</span></label>
-        <div class="api-grid">
-          <label class="api-opt">
-            <input type="checkbox" value="/api/pub/clientes" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
-            <div><span class="api-opt-path">📋 /api/pub/clientes</span><span class="api-opt-desc">Clientes activos</span></div>
+        <div class="api-checks">
+          <label class="api-check">
+            <input type="checkbox" value="/api/pub/clientes" onchange="this.closest('.api-check').classList.toggle('selected',this.checked)">
+            <div>
+              <span class="api-check-path">📋 /api/pub/clientes</span>
+              <span class="api-check-desc">Clientes activos</span>
+            </div>
           </label>
-          <label class="api-opt">
-            <input type="checkbox" value="/api/pub/proveedores" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
-            <div><span class="api-opt-path">🏢 /api/pub/proveedores</span><span class="api-opt-desc">Proveedores activos</span></div>
+          <label class="api-check">
+            <input type="checkbox" value="/api/pub/proveedores" onchange="this.closest('.api-check').classList.toggle('selected',this.checked)">
+            <div>
+              <span class="api-check-path">🏢 /api/pub/proveedores</span>
+              <span class="api-check-desc">Proveedores activos</span>
+            </div>
           </label>
-          <label class="api-opt">
-            <input type="checkbox" value="/api/pub/empleados" onchange="this.closest('.api-opt').classList.toggle('sel',this.checked)">
-            <div><span class="api-opt-path">👤 /api/pub/empleados</span><span class="api-opt-desc">Empleados activos</span></div>
+          <label class="api-check">
+            <input type="checkbox" value="/api/pub/empleados" onchange="this.closest('.api-check').classList.toggle('selected',this.checked)">
+            <div>
+              <span class="api-check-path">👤 /api/pub/empleados</span>
+              <span class="api-check-desc">Empleados activos</span>
+            </div>
           </label>
         </div>
       </div>
@@ -321,142 +926,360 @@ pre{background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:
       </button>
     </div>
   </div>
-</div>
+
+</div><!-- /portal -->
 
 <div id="toast"></div>
 
 <script>
-const API_BASE = "https://crm-gestion.onrender.com";
-let portalToken = null;
-let portalUser = null;
+const API_BASE = 'https://crm-gestion.onrender.com';
 
-function toast(msg, type='ok') {
+// ─── State ───────────────────────────────────────────────
+let state = {
+  jwtToken: null,       // portal JWT (for portal auth)
+  apiToken: null,       // X-API-Token (for data endpoints)
+  user: null,
+  tokenVisible: true
+};
+
+// ─── Toast ───────────────────────────────────────────────
+function toast(msg, type = 'ok') {
   const t = document.getElementById('toast');
-  t.textContent = (type==='ok'?'✅ ':'❌ ') + msg;
+  t.textContent = (type === 'ok' ? '✅ ' : '❌ ') + msg;
   t.className = 'show ' + type;
-  setTimeout(()=> t.className='', 3500);
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = '', 3000);
 }
 
-function showErr(msg) {
-  const a = document.getElementById('form-alert');
-  a.textContent = msg; a.style.display = 'block';
-  a.scrollIntoView({behavior:'smooth',block:'nearest'});
-}
+// ─── Login ───────────────────────────────────────────────
+async function doLogin() {
+  const username = document.getElementById('inp-user').value.trim();
+  const password = document.getElementById('inp-pass').value;
+  const errDiv = document.getElementById('login-err');
+  const btn = document.getElementById('btn-login');
 
-// ──────────────────────────────────────────────────────────────
-// LOGIN PORTAL
-// ──────────────────────────────────────────────────────────────
-async function loginPortal() {
-  const username = document.getElementById('login-username').value.trim();
-  const password = document.getElementById('login-password').value;
-  const errorDiv = document.getElementById('login-error');
-  
+  errDiv.style.display = 'none';
+
   if (!username || !password) {
-    errorDiv.textContent = 'Usuario y contraseña requeridos';
-    errorDiv.style.display = 'block';
+    errDiv.textContent = 'Usuario y contraseña requeridos.';
+    errDiv.style.display = 'block';
     return;
   }
-  
+
+  btn.classList.add('loading');
+  btn.disabled = true;
+
   try {
     const res = await fetch(`${API_BASE}/api/portal/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })
     });
-    
     const data = await res.json();
-    
+
     if (res.ok && data.success) {
-      portalToken = data.token;
-      portalUser = data.user;
-      localStorage.setItem('portal_token', portalToken);
-      localStorage.setItem('portal_user', JSON.stringify(portalUser));
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('contenido-portal').style.display = 'block';
-      cargarContenidoProtegido();
-      toast(`Bienvenido ${portalUser.nombre || portalUser.username}`, 'ok');
+      state.jwtToken = data.token;
+      state.user = data.user;
+
+      // Persist
+      localStorage.setItem('portal_token', data.token);
+      localStorage.setItem('portal_user', JSON.stringify(data.user));
+
+      showPortal();
+      await loadUserToken();
     } else {
-      errorDiv.textContent = data.error || 'Credenciales inválidas';
-      errorDiv.style.display = 'block';
+      errDiv.textContent = data.error || 'Credenciales inválidas.';
+      errDiv.style.display = 'block';
     }
-  } catch(e) {
-    errorDiv.textContent = 'Error de conexión con el servidor';
-    errorDiv.style.display = 'block';
+  } catch (e) {
+    errDiv.textContent = 'Error de conexión con el servidor.';
+    errDiv.style.display = 'block';
+  } finally {
+    btn.classList.remove('loading');
+    btn.disabled = false;
   }
 }
 
-function mostrarSolicitud() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('contenido-portal').style.display = 'block';
-  document.getElementById('solicitar').scrollIntoView({behavior:'smooth'});
+// ─── Load user's API Token from backend ──────────────────
+// The portal JWT is separate from the X-API-Token used for data endpoints.
+// We call /api/admin/tokens (or a dedicated endpoint) to find the token linked
+// to this user's approved solicitud.
+async function loadUserToken() {
+  const tokenDisplay = document.getElementById('token-display-text');
+  const tokenMeta = document.getElementById('token-meta-info');
+
+  try {
+    // Try to get the user's API token from the solicitudes approved for their email
+    // We use the portal JWT to authenticate this request
+    const res = await fetch(`${API_BASE}/api/portal/mi-token`, {
+      headers: {
+        'Authorization': `Bearer ${state.jwtToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.token) {
+        state.apiToken = data.token;
+        renderToken(data);
+        updateCurlExamples(data.token);
+        return;
+      }
+    }
+
+    // Fallback: try admin tokens endpoint if user is admin-level
+    const res2 = await fetch(`${API_BASE}/api/admin/tokens`, {
+      headers: {
+        'Authorization': `Bearer ${state.jwtToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (res2.ok) {
+      const data2 = await res2.json();
+      if (data2.tokens && data2.tokens.length > 0) {
+        // Show first active token
+        const tk = data2.tokens.find(t => t.activo) || data2.tokens[0];
+        // Admin view shows preview only, but we display full if available
+        state.apiToken = tk.token || null;
+        renderToken({ token: tk.token, max_requests_dia: tk.max_requests_dia, endpoints: tk.apis_solicitadas });
+        if (tk.token) updateCurlExamples(tk.token);
+        return;
+      }
+    }
+
+    // No token found — show message
+    renderNoToken();
+
+  } catch (e) {
+    // Network error or endpoint doesn't exist yet — show guidance
+    renderNoToken();
+  }
 }
 
-function cerrarSesionPortal() {
+function renderToken(data) {
+  const wrap = document.getElementById('token-display-wrap');
+  const meta = document.getElementById('token-meta-info');
+  const copyBtn = document.getElementById('btn-copy-token');
+  const visBtn = document.getElementById('btn-vis');
+
+  if (data.token) {
+    wrap.innerHTML = `<div class="token-display" id="token-display-text" style="letter-spacing:0.5px;">${escHtml(data.token)}</div>`;
+    if (data.max_requests_dia) {
+      meta.textContent = `Límite: ${data.max_requests_dia} req/día`;
+    }
+    copyBtn.style.display = '';
+    visBtn.style.display = '';
+  } else {
+    renderNoToken();
+  }
+}
+
+function renderNoToken() {
+  const wrap = document.getElementById('token-display-wrap');
+  const copyBtn = document.getElementById('btn-copy-token');
+  const visBtn = document.getElementById('btn-vis');
+
+  wrap.innerHTML = `
+    <div class="token-no-token">
+      ⚠️ Aún no tienes un API Token asignado. Envía tu solicitud abajo y el administrador te lo enviará por correo.
+    </div>`;
+  copyBtn.style.display = 'none';
+  visBtn.style.display = 'none';
+}
+
+function updateCurlExamples(token) {
+  // Update all curl blocks with real token
+  const endpoints = ['clientes', 'proveedores', 'empleados'];
+  endpoints.forEach(ep => {
+    const el = document.getElementById(`curl-${ep}`);
+    if (el) {
+      const path = `/api/pub/${ep}`;
+      el.innerHTML = `curl ${API_BASE}${path} \\\n     -H <span class="code-string">"X-API-Token: ${escHtml(token)}"</span>`;
+    }
+  });
+  // Update the main curl example
+  const main = document.getElementById('curl-example');
+  if (main) {
+    main.innerHTML = `curl ${API_BASE}/api/pub/clientes \\\n     -H <span class="code-string">"X-API-Token: ${escHtml(token)}"</span>`;
+  }
+}
+
+// ─── Token visibility toggle ─────────────────────────────
+function toggleTokenVis() {
+  const el = document.getElementById('token-display-text');
+  const btn = document.getElementById('btn-vis');
+  if (!el) return;
+  state.tokenVisible = !state.tokenVisible;
+  el.style.filter = state.tokenVisible ? '' : 'blur(6px)';
+  el.style.userSelect = state.tokenVisible ? '' : 'none';
+  btn.textContent = state.tokenVisible ? '👁 Ocultar' : '👁 Mostrar';
+}
+
+// ─── Copy token ──────────────────────────────────────────
+async function copyToken() {
+  if (!state.apiToken) return;
+  try {
+    await navigator.clipboard.writeText(state.apiToken);
+    toast('Token copiado al portapapeles');
+  } catch {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = state.apiToken;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Token copiado');
+  }
+}
+
+// ─── Show portal ─────────────────────────────────────────
+function showPortal() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal').style.display = 'block';
+
+  const nombre = state.user?.nombre || state.user?.username || 'Usuario';
+  document.getElementById('nav-username').textContent = `👤 ${nombre}`;
+  document.getElementById('hero-name').textContent = nombre.split(' ')[0];
+  document.getElementById('greeting-text').textContent = `● BIENVENIDO, ${nombre.toUpperCase().split(' ')[0]}`;
+}
+
+// ─── Logout ──────────────────────────────────────────────
+function doLogout() {
+  state = { jwtToken: null, apiToken: null, user: null, tokenVisible: true };
   localStorage.removeItem('portal_token');
   localStorage.removeItem('portal_user');
-  portalToken = null;
-  portalUser = null;
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('contenido-portal').style.display = 'none';
-  document.getElementById('login-username').value = '';
-  document.getElementById('login-password').value = '';
-  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('portal').style.display = 'none';
+  document.getElementById('inp-user').value = '';
+  document.getElementById('inp-pass').value = '';
+  document.getElementById('login-err').style.display = 'none';
 }
 
-function cargarContenidoProtegido() {
-  const userNameSpan = document.getElementById('user-name-display');
-  if (userNameSpan) {
-    userNameSpan.innerHTML = `👤 ${portalUser?.nombre || portalUser?.username}`;
+// ─── Endpoint accordion ──────────────────────────────────
+function toggleEp(id) {
+  const card = document.getElementById(id);
+  card.classList.toggle('open');
+}
+
+// ─── Tab switching ───────────────────────────────────────
+function switchTab(ep, tab, btn) {
+  // Deactivate all panes for this ep
+  const panes = ['curl', 'example', 'try'];
+  panes.forEach(p => {
+    const el = document.getElementById(`${ep}-${p}`);
+    if (el) el.classList.remove('active');
+  });
+  document.getElementById(`${ep}-${tab}`).classList.add('active');
+
+  // Deactivate sibling buttons
+  const parent = btn.closest('.ep-tabs');
+  parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ─── Run API endpoint ─────────────────────────────────────
+async function runApi(path, responseId) {
+  if (!state.apiToken) {
+    toast('No tienes un API Token asignado', 'err');
+    return;
+  }
+
+  const btnId = 'run-' + responseId.replace('resp-', '');
+  const btn = document.getElementById(btnId);
+  const respWrap = document.getElementById(responseId);
+  const statusEl = document.getElementById(`${responseId}-status`);
+  const timeEl = document.getElementById(`${responseId}-time`);
+  const bodyEl = document.getElementById(`${responseId}-body`);
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Ejecutando...';
+
+  const t0 = Date.now();
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'X-API-Token': state.apiToken }
+    });
+    const elapsed = Date.now() - t0;
+    const data = await res.json();
+
+    respWrap.classList.add('visible');
+
+    const statusClass = res.status < 300 ? 'status-2xx' : res.status < 500 ? 'status-4xx' : 'status-5xx';
+    statusEl.textContent = res.status + ' ' + (res.status === 200 ? 'OK' : 'Error');
+    statusEl.className = `status-badge ${statusClass}`;
+    timeEl.textContent = `${elapsed}ms`;
+    bodyEl.textContent = JSON.stringify(data, null, 2);
+
+  } catch (e) {
+    respWrap.classList.add('visible');
+    statusEl.textContent = 'Error de red';
+    statusEl.className = 'status-badge status-4xx';
+    timeEl.textContent = '';
+    bodyEl.textContent = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ Ejecutar';
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// SOLICITUD DE ACCESO (pública, sin login)
-// ──────────────────────────────────────────────────────────────
+// ─── Public form (from login screen) ─────────────────────
+function showPublicForm() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('portal').style.display = 'block';
+  setTimeout(() => document.getElementById('solicitar').scrollIntoView({ behavior: 'smooth' }), 100);
+}
+
+// ─── Send solicitud ───────────────────────────────────────
 async function enviarSolicitud() {
   const nombre = document.getElementById('f-nombre').value.trim();
   const carnet = document.getElementById('f-carnet').value.trim();
   const correo = document.getElementById('f-correo').value.trim();
   const grupo  = document.getElementById('f-grupo').value.trim();
-  const tel    = document.getElementById('f-telefono').value.trim();
-  const apis   = [...document.querySelectorAll('.api-opt input:checked')].map(c=>c.value);
+  const tel    = document.getElementById('f-tel').value.trim();
+  const apis   = [...document.querySelectorAll('.api-check input:checked')].map(c => c.value);
+  const alertEl = document.getElementById('form-alert');
+  alertEl.style.display = 'none';
 
-  document.getElementById('form-alert').style.display = 'none';
+  const showErr = msg => { alertEl.textContent = msg; alertEl.style.display = 'block'; alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); };
 
-  if (!nombre)      { showErr('El nombre completo es obligatorio.'); return; }
-  if (!carnet)      { showErr('El número de carnet es obligatorio.'); return; }
-  if (!correo)      { showErr('El correo estudiantil es obligatorio.'); return; }
-  if (!grupo)       { showErr('El número de grupo es obligatorio.'); return; }
-  if (!apis.length) { showErr('Selecciona al menos una API a habilitar.'); return; }
+  if (!nombre) return showErr('El nombre completo es obligatorio.');
+  if (!carnet) return showErr('El número de carnet es obligatorio.');
+  if (!correo) return showErr('El correo estudiantil es obligatorio.');
+  if (!grupo)  return showErr('El número de grupo es obligatorio.');
+  if (!apis.length) return showErr('Selecciona al menos una API a habilitar.');
 
   const btn = document.getElementById('btn-enviar');
   btn.disabled = true; btn.textContent = '⏳ Enviando...';
 
   try {
-    const res  = await fetch(`${API_BASE}/api/portal/solicitar`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ nombre, carnet, telefono: tel||null,
+    const res = await fetch(`${API_BASE}/api/portal/solicitar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, carnet, telefono: tel || null,
         correo_estudiante: correo, numero_grupo: grupo, apis_solicitadas: apis })
     });
     const data = await res.json();
 
     if (res.ok && data.success) {
       document.getElementById('form-card').innerHTML = `
-        <div class="success-wrap">
-          <div class="success-ico">✅</div>
-          <div class="success-ttl">¡Solicitud enviada!</div>
+        <div class="success-state">
+          <div class="success-icon">✅</div>
+          <div class="success-title">¡Solicitud enviada!</div>
           <div class="success-msg">
-            Tu solicitud fue recibida. El administrador la revisará y te enviará el token a:<br><br>
-            <strong style="color:var(--accent2);font-size:15px;">${escapeHtml(correo)}</strong><br><br>
+            El administrador la revisará y te enviará el token a:<br><br>
+            <strong style="color:var(--cyan);font-size:15px;">${escHtml(correo)}</strong><br><br>
             <span style="font-size:12px;">Tiempo estimado: 24–48 horas hábiles.</span>
           </div>
-          <div class="success-box">
-            <strong>Resumen de tu solicitud</strong><br>
-            👤 ${escapeHtml(nombre)} &nbsp;|&nbsp; Carnet: <code>${escapeHtml(carnet)}</code><br>
-            🏫 Grupo: ${escapeHtml(grupo)}<br>
+          <div class="success-detail">
+            <strong>Resumen</strong><br>
+            👤 ${escHtml(nombre)} · Carnet: <code>${escHtml(carnet)}</code><br>
+            🏫 Grupo: ${escHtml(grupo)}<br>
             📡 APIs: <code>${apis.join(', ')}</code>
           </div>
-          <button onclick="location.reload()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:8px;cursor:pointer;font-family:'Syne',sans-serif;font-size:13px;">
+          <button onclick="location.reload()" style="background:transparent;border:1px solid var(--border);color:var(--muted);padding:10px 20px;border-radius:8px;cursor:pointer;font-family:var(--sans);font-size:13px;">
             ↩ Nueva solicitud
           </button>
         </div>`;
@@ -465,45 +1288,40 @@ async function enviarSolicitud() {
       showErr(data.error || 'Error al enviar. Intenta de nuevo.');
       btn.disabled = false; btn.textContent = '📝 Enviar solicitud de acceso';
     }
-  } catch(e) {
+  } catch (e) {
     showErr('Error de conexión. Verifica tu internet.');
     btn.disabled = false; btn.textContent = '📝 Enviar solicitud de acceso';
   }
 }
 
-function escapeHtml(str) {
+// ─── Utils ────────────────────────────────────────────────
+function escHtml(str) {
   if (!str) return '';
-  return str.replace(/[&<>]/g, function(m) {
-    if (m === '&') return '&amp;';
-    if (m === '<') return '&lt;';
-    if (m === '>') return '&gt;';
-    return m;
-  });
+  return str.replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 }
 
-// Verificar sesión al cargar la página
+// ─── Init ─────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
-  const token = localStorage.getItem('portal_token');
-  const user = localStorage.getItem('portal_user');
-  
-  if (token && user) {
-    portalToken = token;
-    portalUser = JSON.parse(user);
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('contenido-portal').style.display = 'block';
-    cargarContenidoProtegido();
-  } else {
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('contenido-portal').style.display = 'none';
+  const savedToken = localStorage.getItem('portal_token');
+  const savedUser = localStorage.getItem('portal_user');
+
+  if (savedToken && savedUser) {
+    try {
+      state.jwtToken = savedToken;
+      state.user = JSON.parse(savedUser);
+      showPortal();
+      loadUserToken();
+    } catch {
+      doLogout();
+    }
   }
-  
-  // Enter key en login
-  const passwordInput = document.getElementById('login-password');
-  if (passwordInput) {
-    passwordInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') loginPortal();
+
+  // Enter key in login
+  ['inp-user', 'inp-pass'].forEach(id => {
+    document.getElementById(id)?.addEventListener('keypress', e => {
+      if (e.key === 'Enter') doLogin();
     });
-  }
+  });
 });
 </script>
 </body>

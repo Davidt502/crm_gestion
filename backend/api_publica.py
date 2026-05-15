@@ -42,6 +42,7 @@ def add_cors_headers(response):
 @api_publica_bp.route('/api/admin/<path:path>', methods=['OPTIONS'])
 @api_publica_bp.route('/api/admin', methods=['OPTIONS'])
 @api_publica_bp.route('/api/portal/<path:path>', methods=['OPTIONS'])
+@api_publica_bp.route('/api/pub/<path:path>', methods=['OPTIONS'])
 def handle_options(path=None):
     return '', 200
 
@@ -203,6 +204,140 @@ def portal_token_required(f):
         except jwt.InvalidTokenError:
             return jsonify({"error": "Token inválido"}), 401
     return decorated
+
+
+# ══════════════════════════════════════════════════════════════
+# RUTA: Token propio del usuario portal
+# ══════════════════════════════════════════════════════════════
+
+@api_publica_bp.route("/api/portal/mi-token", methods=["GET"])
+@portal_token_required
+def mi_token():
+    """
+    Devuelve el X-API-Token del usuario portal autenticado.
+
+    Estrategia (en orden):
+    1. Buscar en api_tokens por id_solicitud → correo del usuario
+       (flujo: estudiante solicita → admin aprueba → token queda en api_tokens
+        con id_solicitud, y api_solicitudes.correo identifica al dueño)
+    2. Buscar directamente en api_tokens por id_usuario
+       (flujo: admin crea usuario portal y también le crea un token con ese id_usuario)
+    """
+    portal_user = g.portal_user
+    id_usuario = portal_user.get("id_usuario")
+
+    try:
+        with db_connection() as (conn, cursor):
+
+            # ── Obtener email del usuario portal ──────────────────
+            cursor.execute(
+                "SELECT email FROM usuarios WHERE id_usuario = %s",
+                [id_usuario]
+            )
+            row = cursor.fetchone()
+            email = row[0] if row else None
+
+            # ── Estrategia 1: token vinculado via api_solicitudes ──
+            # api_tokens.id_solicitud → api_solicitudes.id_solicitud
+            # api_solicitudes.correo  == email del usuario portal
+            if email:
+                cursor.execute("""
+                    SELECT t.token,
+                           t.max_requests_dia,
+                           t.activo,
+                           t.total_usos,
+                           t.requests_hoy,
+                           t.ultimo_uso,
+                           s.motivo AS apis_solicitadas
+                    FROM api_tokens t
+                    JOIN api_solicitudes s ON t.id_solicitud = s.id_solicitud
+                    WHERE s.correo  = %s
+                      AND s.estado  = 'Aprobado'
+                      AND t.activo  = TRUE
+                    ORDER BY t.fecha_creacion DESC
+                    LIMIT 1
+                """, [email])
+                tk = cursor.fetchone()
+                if tk:
+                    return jsonify({
+                        "token":           tk[0],
+                        "max_requests_dia": tk[1],
+                        "activo":          tk[2],
+                        "total_usos":      tk[3] or 0,
+                        "requests_hoy":    tk[4] or 0,
+                        "ultimo_uso":      str(tk[5]) if tk[5] else None,
+                        "apis_solicitadas": tk[6] or ""
+                    })
+
+                # ── Estrategia 1b: solicitud aprobada pero token sin id_solicitud ──
+                # Algunos tokens fueron creados antes de que existiera la FK id_solicitud
+                # en api_tokens, por lo que hacemos el join al revés via api_solicitudes.id_token
+                cursor.execute("""
+                    SELECT t.token,
+                           t.max_requests_dia,
+                           t.activo,
+                           t.total_usos,
+                           t.requests_hoy,
+                           t.ultimo_uso,
+                           s.motivo AS apis_solicitadas
+                    FROM api_solicitudes s
+                    JOIN api_tokens t ON s.id_token = t.id_token
+                    WHERE s.correo = %s
+                      AND s.estado = 'Aprobado'
+                      AND t.activo = TRUE
+                    ORDER BY t.fecha_creacion DESC
+                    LIMIT 1
+                """, [email])
+                tk = cursor.fetchone()
+                if tk:
+                    return jsonify({
+                        "token":           tk[0],
+                        "max_requests_dia": tk[1],
+                        "activo":          tk[2],
+                        "total_usos":      tk[3] or 0,
+                        "requests_hoy":    tk[4] or 0,
+                        "ultimo_uso":      str(tk[5]) if tk[5] else None,
+                        "apis_solicitadas": tk[6] or ""
+                    })
+
+            # ── Estrategia 2: token directo por id_usuario ─────────
+            # El admin creó el usuario portal y le asignó un token
+            # directamente en api_tokens con ese id_usuario
+            cursor.execute("""
+                SELECT token,
+                       max_requests_dia,
+                       activo,
+                       total_usos,
+                       requests_hoy,
+                       ultimo_uso
+                FROM api_tokens
+                WHERE id_usuario = %s
+                  AND activo = TRUE
+                ORDER BY fecha_creacion DESC
+                LIMIT 1
+            """, [id_usuario])
+            tk2 = cursor.fetchone()
+            if tk2:
+                return jsonify({
+                    "token":           tk2[0],
+                    "max_requests_dia": tk2[1],
+                    "activo":          tk2[2],
+                    "total_usos":      tk2[3] or 0,
+                    "requests_hoy":    tk2[4] or 0,
+                    "ultimo_uso":      str(tk2[5]) if tk2[5] else None,
+                    "apis_solicitadas": ""
+                })
+
+            # ── Sin token asignado aún ─────────────────────────────
+            return jsonify({
+                "token": None,
+                "mensaje": "Aún no tienes un API Token aprobado. Envía tu solicitud y el administrador lo asignará."
+            }), 200
+
+    except Exception as exc:
+        logger.error("mi_token: %s", exc, exc_info=True)
+        # Devolvemos 200 para que el portal no lo trate como fallo de red
+        return jsonify({"token": None, "error": str(exc)}), 200
 
 
 # ══════════════════════════════════════════════════════════════
