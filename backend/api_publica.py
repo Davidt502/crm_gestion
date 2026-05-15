@@ -779,7 +779,11 @@ def aprobar_solicitud(id_sol):
     data = request.get_json(silent=True) or {}
     puede_escribir = bool(data.get("puede_escribir", False))
     max_req = data.get("max_requests_dia", 1000)
-    endpoints = data.get("endpoints_permitidos", [])
+    # FIX: si no se especifican endpoints, habilitar los 3 por defecto.
+    # Un array vacío [] significa "sin restricción" en el decorator, pero
+    # guardarlo explícitamente evita ambigüedad con tokens viejos en BD.
+    _endpoints_default = ["/api/pub/clientes", "/api/pub/proveedores", "/api/pub/empleados"]
+    endpoints = data.get("endpoints_permitidos") or _endpoints_default
 
     try:
         with db_connection() as (conn, cursor):
@@ -1377,6 +1381,58 @@ def token_publico_required(f):
                          "Intenta de nuevo en unos segundos."
             }), 500
     return decorated
+
+
+@api_publica_bp.route("/api/admin/tokens/reparar-endpoints", methods=["POST"])
+@token_required
+def reparar_endpoints_tokens():
+    """
+    Corrige tokens en la BD que tienen endpoints_permitidos NULL o [] vacío,
+    asignándoles los 3 endpoints públicos por defecto.
+    Solo admin. Útil para migrar tokens creados antes del fix de _resolver_via_link.
+    """
+    es_admin, _ = _solo_admin()
+    if not es_admin:
+        return jsonify({"error": "Solo administradores."}), 403
+
+    endpoints_default = json.dumps([
+        "/api/pub/clientes",
+        "/api/pub/proveedores",
+        "/api/pub/empleados"
+    ])
+
+    try:
+        with db_connection() as (conn, cursor):
+            # Tokens con NULL
+            cursor.execute("""
+                UPDATE api_tokens
+                SET endpoints_permitidos = %s
+                WHERE endpoints_permitidos IS NULL
+                RETURNING id_token
+            """, [endpoints_default])
+            reparados_null = len(cursor.fetchall())
+
+            # Tokens con [] vacío o string vacío
+            cursor.execute("""
+                UPDATE api_tokens
+                SET endpoints_permitidos = %s
+                WHERE endpoints_permitidos IN ('[]', '', '[""]', 'null')
+                RETURNING id_token
+            """, [endpoints_default])
+            reparados_vacios = len(cursor.fetchall())
+
+            total = reparados_null + reparados_vacios
+
+        return jsonify({
+            "success": True,
+            "reparados_null": reparados_null,
+            "reparados_vacios": reparados_vacios,
+            "total_reparados": total,
+            "mensaje": f"{total} token(s) reparados con endpoints por defecto."
+        })
+    except Exception as exc:
+        logger.error("reparar_endpoints_tokens: %s", exc, exc_info=True)
+        return jsonify({"error": str(exc)}), 500
 
 
 @api_publica_bp.route("/api/pub/clientes", methods=["GET"])

@@ -233,7 +233,10 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
 
   <!-- Tokens API -->
   <div class="page" id="page-tokens">
-    <div class="page-header"><div><div class="page-title">Tokens API activos</div></div></div>
+    <div class="page-header">
+      <div><div class="page-title">Tokens API activos</div></div>
+      <button class="btn btn-ghost" onclick="repararEndpoints()" style="font-size:12px;padding:6px 14px;" title="Corrige tokens viejos que no tienen endpoints asignados en la BD">🔧 Reparar endpoints</button>
+    </div>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Nombre</th><th>Carnet</th><th>Correo</th><th>Grupo</th><th>APIs</th><th>Usos hoy</th><th>Estado</th><th>Acciones</th></tr></thead>
@@ -323,8 +326,16 @@ td{padding:12px 16px;border-top:1px solid var(--border);}
   <div class="modal">
     <div class="modal-header"><span>Aprobar solicitud</span><button onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <div class="field"><label>Límite diario</label><input type="number" id="max-req" value="1000"></div>
+      <div class="field"><label>Límite diario de requests</label><input type="number" id="max-req" value="1000" min="1"></div>
       <div class="field"><label>Permiso escritura</label><input type="checkbox" id="perm-escribir"></div>
+      <div class="field">
+        <label>APIs habilitadas</label>
+        <div class="api-checkbox-group" id="aprobar-apis">
+          <label><input type="checkbox" value="/api/pub/clientes" checked> 📋 /api/pub/clientes</label>
+          <label><input type="checkbox" value="/api/pub/proveedores" checked> 🏢 /api/pub/proveedores</label>
+          <label><input type="checkbox" value="/api/pub/empleados" checked> 👤 /api/pub/empleados</label>
+        </div>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
@@ -909,11 +920,18 @@ function closeModal() { document.querySelectorAll('.modal-overlay').forEach(m =>
 
 async function confirmarAprobacion() {
   if (!solActual) return;
-  const body = { puede_leer: true, puede_escribir: document.getElementById('perm-escribir').checked, max_requests_dia: parseInt(document.getElementById('max-req').value) };
-  const [res] = await apiFetch(`/api/admin/solicitudes/${solActual}/aprobar`, { method: 'POST', body: JSON.stringify(body) });
-  closeModal(); loadSolicitudes(); loadStats(); 
+  const endpoints = Array.from(document.querySelectorAll('#aprobar-apis input:checked')).map(cb => cb.value);
+  if (!endpoints.length) { toast('Selecciona al menos una API a habilitar', 'error'); return; }
+  const body = {
+    puede_leer: true,
+    puede_escribir: document.getElementById('perm-escribir').checked,
+    max_requests_dia: parseInt(document.getElementById('max-req').value) || 1000,
+    endpoints_permitidos: endpoints
+  };
+  const [res, data] = await apiFetch(`/api/admin/solicitudes/${solActual}/aprobar`, { method: 'POST', body: JSON.stringify(body) });
+  closeModal(); loadSolicitudes(); loadStats();
   if (res.ok) toast('Solicitud aprobada', 'success');
-  else toast('Error al aprobar', 'error');
+  else toast(data.error || 'Error al aprobar', 'error');
 }
 
 async function confirmarRechazo() {
@@ -927,6 +945,17 @@ async function confirmarRechazo() {
 
 // ── Tokens API ───────────────────────────────────────────────
 let tokenParaEliminar = null;
+
+async function repararEndpoints() {
+  if (!confirm('¿Reparar todos los tokens sin endpoints asignados?\nSe les asignarán los 3 endpoints públicos por defecto (/clientes, /proveedores, /empleados).')) return;
+  const [res, data] = await apiFetch('/api/admin/tokens/reparar-endpoints', { method: 'POST' });
+  if (res.ok && data.success) {
+    toast(data.mensaje, 'success');
+    loadTokens();
+  } else {
+    toast(data.error || 'Error al reparar endpoints', 'error');
+  }
+}
 
 async function loadTokens() {
   try {
