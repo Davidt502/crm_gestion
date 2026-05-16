@@ -1441,7 +1441,8 @@ def pub_clientes():
     try:
         with db_connection() as (conn, cursor):
             cursor.execute("""
-                SELECT id_cliente, nombre, correo, telefono, estado
+                SELECT id_cliente, nombre_razon_social, documento_identificacion,
+                       tipo, correo, estado
                 FROM clientes 
                 WHERE estado = 'Activo' 
                 LIMIT 100
@@ -1479,7 +1480,8 @@ def pub_empleados():
     try:
         with db_connection() as (conn, cursor):
             cursor.execute("""
-                SELECT id_empleado, nombre, cargo, correo, estado
+                SELECT id_empleado, numero_empleado, nombre_completo,
+                       cargo, correo, telefono, estado
                 FROM empleados 
                 WHERE estado = 'Activo' 
                 LIMIT 100
