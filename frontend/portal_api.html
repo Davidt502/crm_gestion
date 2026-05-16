@@ -974,44 +974,7 @@ pre.response-body {
         <button class="btn-primary" onclick="abrirCorreoOutlook()" style="width:auto; padding:12px 24px; background:linear-gradient(135deg, #1e88e5, #0d47a1); display:inline-flex; align-items:center; gap:8px;">
           <span style="font-size:18px;">🌐</span> Abrir en Outlook
         </button>
-        <button class="btn-sm btn-copy" onclick="copiarCorreo()" style="padding:12px 20px; font-size:13px;">
-          📋 Copiar correo
-        </button>
       </div>
-
-      <!-- Template del mensaje -->
-      <div style="background:var(--surface2); border-radius:16px; padding:20px; border:1px solid var(--border);">
-        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-          <span style="font-size:18px;">📝</span>
-          <strong style="color:var(--text);">Plantilla sugerida para tu correo:</strong>
-        </div>
-        
-        <div style="background:var(--bg); border-radius:12px; padding:16px; font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.8;">
-          <div style="color:var(--cyan); margin-bottom:8px;">📌 Copia y pega esto en tu correo:</div>
-          <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; margin-bottom:12px;">
-            <span style="color:var(--green);">Asunto:</span> Solicitud de acceso a API - [Tu Nombre]<br><br>
-            <span style="color:var(--green);">Mensaje:</span><br>
-            Hola,<br><br>
-            Me gustaría solicitar acceso a la API del CRM.<br><br>
-            <strong>Mis datos:</strong><br>
-            • 📝 Nombre completo: _______________<br>
-            • 🎓 Carnet: _______________<br>
-            • 👥 Grupo / sección: _______________<br>
-            • 📱 Teléfono: _______________<br><br>
-            <strong>📡 APIs que necesito:</strong><br>
-            □ /api/pub/clientes<br>
-            □ /api/pub/proveedores<br>
-            □ /api/pub/empleados<br><br>
-            Quedo atento a su respuesta.<br>
-            Saludos cordiales.
-          </div>
-        </div>
-        
-        <button class="btn-sm btn-copy" onclick="copiarPlantilla()" style="margin-top:12px; width:100%; background:rgba(59,130,246,0.1);">
-          📋 Copiar plantilla completa
-        </button>
-      </div>
-    </div>
 
     <!-- Información adicional -->
     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px;">
