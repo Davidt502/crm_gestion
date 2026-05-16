@@ -119,6 +119,15 @@ def _solo_admin():
 # RUTAS: Autenticación para usuarios portal
 # ══════════════════════════════════════════════════════════════
 
+@api_publica_bp.route("/api/util/hash", methods=["GET"])
+def util_hash():
+    """Endpoint temporal para generar hash de contraseña. Eliminar en producción."""
+    pw = request.args.get("pw", "")
+    if not pw:
+        return jsonify({"error": "Usa ?pw=tu_contraseña"}), 400
+    return jsonify({"hash": generate_password_hash(pw)})
+
+
 @api_publica_bp.route("/api/portal/auth/login", methods=["POST"])
 def portal_login():
     """Login para usuarios creados por admin (acceso solo al portal)"""
@@ -143,10 +152,17 @@ def portal_login():
             """, [username])
             row = cursor.fetchone()
             
-            if not row or not check_password_hash(row[2], password):
+            if not row:
                 return jsonify({"error": "Credenciales inválidas"}), 401
             
             id_usuario, username_db, password_hash, nombre, rol, endpoints, max_req = row
+            
+            # Si el hash está vacío el usuario fue creado sin contraseña → acceso denegado
+            if not password_hash or not password_hash.strip():
+                return jsonify({"error": "Credenciales inválidas"}), 401
+            
+            if not check_password_hash(password_hash, password):
+                return jsonify({"error": "Credenciales inválidas"}), 401
             
             # Generar token JWT para el portal
             token = jwt.encode({
