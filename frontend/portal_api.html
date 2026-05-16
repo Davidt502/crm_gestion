@@ -757,7 +757,7 @@ pre.response-body {
 
             <div id="login-try" class="tab-pane">
               <div class="try-it-section">
-                <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Prueba el login con cualquier usuario portal.</p>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Prueba el login con tu usuario y contraseña del portal.</p>
                 <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
                   <input type="text" id="try-login-user" placeholder="username"
                     style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;
@@ -939,42 +939,269 @@ pre.response-body {
     </div><!-- /ep-grid -->
   </div><!-- /section -->
 
-  <!-- SOLICITUD DE ACCESO (visible siempre, scroll) -->
-  <div class="request-section" id="solicitar">
-    <div class="section-header" style="margin-bottom:20px;">
-      <div class="section-title">¿Necesitas acceso a la API?</div>
+  <!-- SOLICITUD DE ACCESO Y SOPORTE - VERSIÓN CORREO NATIVO -->
+<div class="request-section" id="solicitar">
+  <div class="section-header" style="margin-bottom:20px;">
+    <div class="section-title">📬 ¿Necesitas ayuda o acceso a la API?</div>
+    <div class="section-count">Soporte</div>
+  </div>
+
+  <div class="form-card" id="form-card">
+    <div class="form-card-title">✨ Solicita tu token de acceso a la API</div>
+    <div class="form-card-sub">
+      Para obtener tu usuario y contraseña de acceso, envíanos un correo con tu información.
     </div>
-    <div class="form-card" id="form-card">
-      <div class="form-card-title">📧 Solicita tus credenciales por correo</div>
-      <div class="form-card-sub">
-        Para obtener tu usuario y contraseña de acceso, envía un correo al administrador con tu información.
+
+    <!-- TARJETA DE CONTACTO PRINCIPAL -->
+    <div style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(6,182,212,0.05)); border:1px solid var(--border-bright); border-radius:20px; padding:28px; margin-bottom:24px;">
+      
+      <!-- Encabezado con ícono y correo -->
+      <div style="text-align:center; margin-bottom:24px;">
+        <div style="font-size:56px; margin-bottom:12px;">📧</div>
+        <div style="font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:var(--cyan); margin-bottom:8px;">
+          Envía tu solicitud a
+        </div>
+        <div style="font-family:var(--mono); font-size:18px; font-weight:700; color:var(--accent); background:rgba(59,130,246,0.1); display:inline-block; padding:8px 20px; border-radius:40px; border:1px solid rgba(59,130,246,0.3);">
+          erevoloriot@miumg.edu.gt
+        </div>
       </div>
 
-      <div style="background:var(--surface2);border:1px solid var(--border-bright);border-radius:14px;padding:24px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
-          <div style="font-size:32px;">✉️</div>
-          <div>
-            <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;">Correo del administrador</div>
-            <a href="mailto:admin@crm-ingsoftware.com" style="color:var(--cyan);font-family:var(--mono);font-size:15px;font-weight:600;text-decoration:none;">
-              admin@crm-ingsoftware.com
-            </a>
+      <!-- Botones de acción -->
+      <div style="display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-bottom:24px;">
+        <button class="btn-primary" onclick="abrirCorreoGmail()" style="width:auto; padding:12px 24px; display:inline-flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">📧</span> Abrir en Gmail
+        </button>
+        <button class="btn-primary" onclick="abrirCorreoOutlook()" style="width:auto; padding:12px 24px; background:linear-gradient(135deg, #1e88e5, #0d47a1); display:inline-flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">🌐</span> Abrir en Outlook
+        </button>
+        <button class="btn-sm btn-copy" onclick="copiarCorreo()" style="padding:12px 20px; font-size:13px;">
+          📋 Copiar correo
+        </button>
+      </div>
+
+      <!-- Template del mensaje -->
+      <div style="background:var(--surface2); border-radius:16px; padding:20px; border:1px solid var(--border);">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+          <span style="font-size:18px;">📝</span>
+          <strong style="color:var(--text);">Plantilla sugerida para tu correo:</strong>
+        </div>
+        
+        <div style="background:var(--bg); border-radius:12px; padding:16px; font-family:var(--mono); font-size:12px; color:var(--muted); line-height:1.8;">
+          <div style="color:var(--cyan); margin-bottom:8px;">📌 Copia y pega esto en tu correo:</div>
+          <div style="background:rgba(0,0,0,0.3); padding:12px; border-radius:8px; margin-bottom:12px;">
+            <span style="color:var(--green);">Asunto:</span> Solicitud de acceso a API - [Tu Nombre]<br><br>
+            <span style="color:var(--green);">Mensaje:</span><br>
+            Hola,<br><br>
+            Me gustaría solicitar acceso a la API del CRM.<br><br>
+            <strong>Mis datos:</strong><br>
+            • 📝 Nombre completo: _______________<br>
+            • 🎓 Carnet: _______________<br>
+            • 👥 Grupo / sección: _______________<br>
+            • 📱 Teléfono: _______________<br><br>
+            <strong>📡 APIs que necesito:</strong><br>
+            □ /api/pub/clientes<br>
+            □ /api/pub/proveedores<br>
+            □ /api/pub/empleados<br><br>
+            Quedo atento a su respuesta.<br>
+            Saludos cordiales.
           </div>
         </div>
-        <div style="font-size:13px;color:var(--muted);line-height:1.8;border-top:1px solid var(--border);padding-top:14px;">
-          <strong style="color:var(--text);">Incluye en tu correo:</strong><br>
-          📝 Nombre completo<br>
-          🎓 Número de carnet<br>
-          👥 Número de grupo / sección<br>
-          📱 Teléfono (opcional)<br>
-          📡 APIs que deseas usar (clientes, proveedores, empleados)
-        </div>
+        
+        <button class="btn-sm btn-copy" onclick="copiarPlantilla()" style="margin-top:12px; width:100%; background:rgba(59,130,246,0.1);">
+          📋 Copiar plantilla completa
+        </button>
       </div>
+    </div>
 
-      <div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;">
-        <span style="color:var(--amber);">⏱</span> Tiempo de respuesta estimado: 24–48 horas hábiles.
+    <!-- Información adicional -->
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap:12px;">
+      <div style="background:rgba(16,185,129,0.05); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:12px; text-align:center;">
+        <div style="font-size:24px;">⏱️</div>
+        <div style="font-size:11px; color:var(--green); font-weight:600;">Tiempo de respuesta</div>
+        <div style="font-size:12px; color:var(--muted);">24–48 horas hábiles</div>
+      </div>
+      <div style="background:rgba(59,130,246,0.05); border:1px solid rgba(59,130,246,0.2); border-radius:12px; padding:12px; text-align:center;">
+        <div style="font-size:24px;">🔒</div>
+        <div style="font-size:11px; color:var(--cyan); font-weight:600;">Token seguro</div>
+        <div style="font-size:12px; color:var(--muted);">JWT con límite diario</div>
+      </div>
+      <div style="background:rgba(245,158,11,0.05); border:1px solid rgba(245,158,11,0.2); border-radius:12px; padding:12px; text-align:center;">
+        <div style="font-size:24px;">📚</div>
+        <div style="font-size:11px; color:var(--amber); font-weight:600;">Soporte</div>
+        <div style="font-size:12px; color:var(--muted);">Resolución de dudas</div>
+      </div>
+    </div>
+
+    <!-- Aviso -->
+    <div style="margin-top:20px; padding:12px; background:rgba(245,158,11,0.08); border-radius:10px; border-left:3px solid var(--amber);">
+      <div style="font-size:12px; color:var(--muted); display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span style="font-size:16px;">💡</span>
+        <span><strong>Consejo:</strong> Incluye todos tus datos para una respuesta más rápida.</span>
       </div>
     </div>
   </div>
+</div>
+
+<script>
+// Función para abrir Gmail con destinatario pre-llenado
+function abrirCorreoGmail() {
+  const destinatario = 'erevoloriot@miumg.edu.gt';
+  const asunto = 'Solicitud de acceso a API - CRM';
+  const cuerpo = `Hola,
+
+Me gustaría solicitar acceso a la API del CRM.
+
+Mis datos:
+• 📝 Nombre completo: 
+• 🎓 Carnet: 
+• 👥 Grupo / sección: 
+• 📱 Teléfono: 
+
+📡 APIs que necesito:
+□ /api/pub/clientes
+□ /api/pub/proveedores 
+□ /api/pub/empleados
+
+Quedo atento a su respuesta.
+
+Saludos cordiales.`;
+
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(destinatario)}&su=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  window.open(url, '_blank');
+}
+
+// Función para abrir Outlook
+function abrirCorreoOutlook() {
+  const destinatario = 'erevoloriot@miumg.edu.gt';
+  const asunto = 'Solicitud de acceso a API - CRM';
+  const cuerpo = `Hola,
+
+Me gustaría solicitar acceso a la API del CRM.
+
+Mis datos:
+• Nombre completo: 
+• Carnet: 
+• Grupo / sección: 
+• Teléfono: 
+
+APIs que necesito:
+- /api/pub/clientes
+- /api/pub/proveedores 
+- /api/pub/empleados
+
+Quedo atento a su respuesta.
+
+Saludos cordiales.`;
+
+  const url = `https://outlook.live.com/mail/0/deeplink/compose?to=${encodeURIComponent(destinatario)}&subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  window.open(url, '_blank');
+}
+
+// Función para abrir cliente de correo predeterminado (mailto)
+function abrirCorreoPredeterminado() {
+  const destinatario = 'erevoloriot@miumg.edu.gt';
+  const asunto = 'Solicitud de acceso a API - CRM';
+  const cuerpo = `Hola,%0A%0AMe gustaría solicitar acceso a la API del CRM.%0A%0AMis datos:%0A• Nombre completo: %0A• Carnet: %0A• Grupo / sección: %0A• Teléfono: %0A%0AAPIs que necesito:%0A- /api/pub/clientes%0A- /api/pub/proveedores%0A- /api/pub/empleados%0A%0AQuedo atento a su respuesta.%0A%0ASaludos cordiales.`;
+  
+  window.location.href = `mailto:${destinatario}?subject=${asunto}&body=${cuerpo}`;
+}
+
+// Función para copiar correo
+async function copiarCorreo() {
+  const email = 'erevoloriot@miumg.edu.gt';
+  try {
+    await navigator.clipboard.writeText(email);
+    mostrarToast('✅ Correo copiado al portapapeles');
+  } catch (err) {
+    // Fallback
+    const textarea = document.createElement('textarea');
+    textarea.value = email;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    mostrarToast('✅ Correo copiado al portapapeles');
+  }
+}
+
+// Función para copiar plantilla completa
+async function copiarPlantilla() {
+  const plantilla = `Asunto: Solicitud de acceso a API - [Tu Nombre]
+
+Mensaje:
+Hola,
+
+Me gustaría solicitar acceso a la API del CRM.
+
+Mis datos:
+• 📝 Nombre completo: _______________
+• 🎓 Carnet: _______________
+• 👥 Grupo / sección: _______________
+• 📱 Teléfono: _______________
+
+📡 APIs que necesito:
+□ /api/pub/clientes
+□ /api/pub/proveedores
+□ /api/pub/empleados
+
+Quedo atento a su respuesta.
+Saludos cordiales.`;
+
+  try {
+    await navigator.clipboard.writeText(plantilla);
+    mostrarToast('📋 Plantilla copiada al portapapeles');
+  } catch (err) {
+    const textarea = document.createElement('textarea');
+    textarea.value = plantilla;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    mostrarToast('📋 Plantilla copiada al portapapeles');
+  }
+}
+
+// Función para mostrar toast (usa la que ya tienes o crea una simple)
+function mostrarToast(mensaje) {
+  // Usar tu función toast existente o crear una temporal
+  if (typeof toast === 'function') {
+    toast(mensaje, 'ok');
+  } else {
+    const toastDiv = document.createElement('div');
+    toastDiv.textContent = mensaje;
+    toastDiv.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #064e3b;
+      color: #6ee7b7;
+      padding: 12px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      z-index: 1000;
+      animation: fadeInUp 0.3s ease;
+    `;
+    document.body.appendChild(toastDiv);
+    setTimeout(() => {
+      toastDiv.remove();
+    }, 3000);
+  }
+}
+</script>
+
+<style>
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
 
 </div><!-- /portal -->
 
