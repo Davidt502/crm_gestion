@@ -130,7 +130,7 @@ def util_hash():
 
 @api_publica_bp.route("/api/portal/auth/login", methods=["POST"])
 def portal_login():
-    """Login para usuarios creados por admin (acceso solo al portal)"""
+    """Login para usuarios del portal"""
     if not request.is_json:
         return jsonify({"error": "Content-Type debe ser application/json"}), 400
     
@@ -143,43 +143,55 @@ def portal_login():
     
     try:
         with db_connection() as (conn, cursor):
+            # Verificar usuario
             cursor.execute("""
-                SELECT u.id_usuario, u.username, u.password_hash, u.nombre, u.rol,
-                       up.endpoints_permitidos, up.max_requests_dia
-                FROM usuarios u
-                LEFT JOIN portal_usuarios up ON u.id_usuario = up.id_usuario
-                WHERE u.username = %s
+                SELECT id_usuario, username, password_hash, nombre, rol, estado
+                FROM usuarios
+                WHERE username = %s
             """, [username])
             row = cursor.fetchone()
             
             if not row:
                 return jsonify({"error": "Credenciales inválidas"}), 401
             
-            id_usuario, username_db, password_hash, nombre, rol, endpoints, max_req = row
+            id_usuario, username_db, password_hash, nombre, rol, estado = row
             
-            # Si el hash está vacío el usuario fue creado sin contraseña → acceso denegado
-            if not password_hash or not password_hash.strip():
+            # Verificar estado
+            if estado != 'Activo':
+                return jsonify({"error": "Usuario inactivo"}), 401
+            
+            # Verificar contraseña
+            if not password_hash or not check_password_hash(password_hash, password):
                 return jsonify({"error": "Credenciales inválidas"}), 401
             
-            if not check_password_hash(password_hash, password):
-                return jsonify({"error": "Credenciales inválidas"}), 401
+            # Obtener permisos específicos del portal
+            endpoints = ["/api/pub/clientes", "/api/pub/proveedores", "/api/pub/empleados"]
+            max_requests = 500
             
-            # Generar token JWT para el portal
+            try:
+                cursor.execute("""
+                    SELECT endpoints_permitidos, max_requests_dia
+                    FROM portal_usuarios
+                    WHERE id_usuario = %s
+                """, [id_usuario])
+                portal_row = cursor.fetchone()
+                if portal_row:
+                    endpoints_json = portal_row[0]
+                    max_requests = portal_row[1] or 500
+                    try:
+                        endpoints = json.loads(endpoints_json) if endpoints_json else endpoints
+                    except:
+                        pass
+            except Exception as e:
+                logger.warning(f"No se pudo obtener datos de portal_usuarios: {e}")
+            
+            # Generar token JWT
             token = jwt.encode({
                 'id_usuario': id_usuario,
                 'username': username,
-                'rol': 'portal',
+                'rol': rol,
                 'exp': datetime.utcnow() + timedelta(days=7)
             }, JWT_SECRET_KEY, algorithm='HS256')
-            
-            # Actualizar último acceso
-            cursor.execute("UPDATE portal_usuarios SET ultimo_acceso = NOW() WHERE id_usuario = %s", [id_usuario])
-            
-            # Parsear endpoints permitidos
-            try:
-                endpoints_list = json.loads(endpoints) if endpoints else []
-            except:
-                endpoints_list = []
             
             return jsonify({
                 "success": True,
@@ -188,14 +200,15 @@ def portal_login():
                     "id": id_usuario,
                     "username": username,
                     "nombre": nombre,
-                    "rol": "portal",
-                    "endpoints_permitidos": endpoints_list,
-                    "max_requests_dia": max_req or 500
+                    "rol": rol,
+                    "endpoints_permitidos": endpoints,
+                    "max_requests_dia": max_requests
                 }
             })
+            
     except Exception as exc:
-        logger.error("portal_login: %s", exc, exc_info=True)
-        return jsonify({"error": "Error interno"}), 500
+        logger.error(f"portal_login error: {exc}", exc_info=True)
+        return jsonify({"error": "Error interno del servidor"}), 500
 
 
 def portal_token_required(f):
